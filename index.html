@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Periodic Trends</title>
+<style>
+:root{
+  --home-bg:#000000;
+  --home-text:#ffffff;
+  --nav-bg:#000000;
+  --nav-text:#ffffff;
+  --nav-dim:#9a9a9a;
+  --highlight:#ffd400;
+  --play-bg:#c6e2f6;
+  --tray-bg:rgba(255,255,255,0.38);
+  --tray-stroke:#8fb3cf;
+  --panel-bg:#ffffff;
+  --panel-stroke:#8a96a1;
+  --text:#1b1f23;
+  --muted:#5d6670;
+  --shell:#6f7d8a;
+  --cell:#eef1f4;
+  --cell-stroke:#d0d6dc;
+  --cell-faint:#b3bac2;
+  --link:#1f5fbf;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  background:var(--home-bg);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --play-bg:#a9cbe6;
+    --tray-bg:rgba(255,255,255,0.28);
+    --panel-bg:#f3f6f9;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --play-bg:#a9cbe6;
+  --tray-bg:rgba(255,255,255,0.28);
+  --panel-bg:#f3f6f9;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--home-bg);color:var(--home-text);font-family:Arial,Helvetica,sans-serif;overflow:hidden}
+#app{height:100%;display:flex;flex-direction:column}
+
+.screen{flex:1;min-height:0;display:none;position:relative}
+.screen.active{display:flex}
+
+/* Home */
+.home{flex-direction:column;align-items:center;justify-content:center;gap:clamp(24px,5vh,56px);background:var(--home-bg);padding:16px}
+.home-title{margin:0;font-weight:normal;font-size:clamp(30px,5vw,52px);color:var(--home-text);letter-spacing:.01em}
+.home-grid{display:grid;grid-template-columns:repeat(4,minmax(0,220px));gap:clamp(14px,2.5vw,32px);width:100%;justify-content:center}
+.home-btn{background:none;border:0;color:var(--home-text);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:12px;padding:8px;font:inherit;transition:transform .15s ease}
+.home-btn svg{width:100%;height:auto;aspect-ratio:4/3;border-radius:10px;outline:3px solid transparent;outline-offset:3px;transition:outline-color .15s}
+.home-btn span{font-size:clamp(15px,1.6vw,19px)}
+.home-btn:hover{transform:scale(1.04)}
+.home-btn:hover svg,.home-btn:focus-visible svg{outline-color:var(--highlight)}
+.home-btn:focus{outline:none}
+@media (max-width:820px){.home-grid{grid-template-columns:repeat(2,minmax(0,200px))}}
+@media (prefers-reduced-motion:reduce){.home-btn{transition:none}.home-btn:hover{transform:none}}
+
+/* Nav bar */
+.navbar{flex:none;height:58px;background:var(--nav-bg);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 14px;border-top:1px solid #2b2b2b}
+.nav-title{color:var(--nav-text);font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav-center{display:flex;align-items:center;gap:4px}
+.nav-btn{background:none;border:0;border-bottom:3px solid transparent;color:var(--nav-dim);display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 6px 2px;cursor:pointer;font:inherit;opacity:.75}
+.nav-btn:hover,.nav-btn:focus-visible{opacity:1;color:var(--nav-text)}
+.nav-btn.active{opacity:1;color:var(--nav-text);border-bottom-color:var(--highlight)}
+.nav-btn svg.mini{width:42px;height:31px;border-radius:4px}
+.nav-btn span{font-size:10px}
+.nav-home svg{width:30px;height:30px}
+.nav-sep{width:1px;height:32px;background:#333;margin:0 8px}
+@media (max-width:680px){.nav-title{display:none}.nav-btn span{display:none}.navbar{grid-template-columns:0 1fr 0;justify-items:center}}
+
+/* Play area */
+.play{background:var(--play-bg);align-items:center;justify-content:center}
+#enSvg,#ieSvg,#ecSvg,#arSvg{width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+#enSvg text,#ieSvg text,#ecSvg text,#arSvg text{font-family:Arial,Helvetica,sans-serif}
+.drop-zone{fill:rgba(255,255,255,.3);stroke:#5d7f9c;stroke-width:2.5;stroke-dasharray:10 7}
+.drop-zone.hot{stroke:#e09a00;fill:rgba(255,212,0,.16)}
+.zone-text{font-size:20px;fill:var(--muted);text-anchor:middle}
+.status-text{font-size:15px;font-weight:bold;fill:var(--text);text-anchor:middle}
+.gun-dark{fill:#2f3a46;stroke:#1d252e;stroke-width:2}
+.gun-label{font-size:18px;font-weight:bold;fill:#fff;text-anchor:middle}
+.gun-meter{fill:#1d252e}
+.gun-meter-fill{fill:var(--highlight)}
+.nozzle-glow{fill:#8fd0ff}
+.field-arc{fill:none;stroke:#1f5fbf;stroke-width:2.6;stroke-linecap:round}
+.slider-title{font-size:16px;font-weight:bold;fill:var(--text)}
+.slider-track{fill:#fff;stroke:#5b6670;stroke-width:1}
+.slider-fill{fill:#4fa3e0}
+.slider-tick{stroke:#5b6670;stroke-width:1.2}
+.slider-tick-label{font-size:11px;fill:var(--muted);text-anchor:middle}
+.slider-thumb{fill:#4fa3e0;stroke:#1f5f99;stroke-width:1.5}
+.slider-thumb-line{stroke:#fff;stroke-width:1.5}
+.slider-hit{fill:transparent;cursor:pointer}
+.arrow-btn{fill:#fff;stroke:#5b6670;stroke-width:1.2;cursor:pointer}
+.arrow-btn:hover{fill:#eaf4fc}
+.arrow-glyph{fill:#2b3137;pointer-events:none}
+.value-box{fill:#fff;stroke:#5b6670;stroke-width:1.2}
+.value-text{font-size:16px;font-weight:bold;fill:var(--text);text-anchor:middle}
+.e-slot{fill:none;stroke:#1f5fbf;stroke-width:1.5;stroke-dasharray:2.5 2}
+.badge-pos .badge-bg{stroke:#c0392b}
+.badge-pos .badge-text{fill:#c0392b}
+.start-line{stroke:#5d6670;stroke-width:1.5;stroke-dasharray:4 4}
+.start-label{font-size:12px;fill:var(--muted);text-anchor:middle}
+.pull-arrow{stroke:#d6336c;stroke-width:3;stroke-linecap:round}
+.pull-head{fill:#d6336c}
+.pair-ring{fill:none;stroke:var(--highlight);stroke-width:2.5}
+.delta{font-size:20px;font-weight:bold;text-anchor:middle;paint-order:stroke;stroke:var(--play-bg);stroke-width:4px}
+.delta.neg{fill:#1f5fbf}
+.delta.pos{fill:#c0392b}
+.burst{fill:none;stroke:var(--highlight);stroke-width:3}
+.e-dot.added{stroke:#e09a00;stroke-width:1.6}
+.ion-btn{cursor:pointer}
+.ion-bg{fill:#7048e8;stroke:#4c2fb0;stroke-width:2}
+.ion-btn:hover .ion-bg{fill:#7f5af0}
+.ion-btn.off{cursor:default}
+.ion-btn.off .ion-bg{fill:#c3c8cf;stroke:#9aa3ab}
+.ruler-caption{font-size:12px;fill:var(--muted)}
+.bulb-glass.dim{fill:#fff3b0;stroke:#d8c27a}
+.dt-head{fill:var(--cell)}
+.dt-row{fill:#fff;stroke:var(--cell-stroke);stroke-width:1}
+.dt-row.alt{fill:#f6f8fa}
+.dt-grid{stroke:var(--cell-stroke);stroke-width:1}
+.dt-hot{fill:none;stroke:#e09a00;stroke-width:2.5}
+.dt-h{font-size:11px;font-weight:bold;fill:var(--text);text-anchor:middle}
+.dt-c{font-size:13px;fill:var(--text);text-anchor:middle}
+.dt-c.name{text-anchor:start;font-weight:bold}
+.tray-label{font-size:14px;font-weight:bold;fill:var(--text)}
+.sym-label{font-size:18px;font-weight:bold;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.bond-line{stroke:#2b3137;stroke-width:5;stroke-linecap:round}
+.zone-name{font-size:20px;font-weight:bold;fill:var(--text);text-anchor:middle}
+.rd-val.big{font-size:44px;font-weight:bold}
+.atom-name{display:none}
+.ion-text{fill:#fff;font-size:16px;font-weight:bold;text-anchor:middle;pointer-events:none}
+.wire{fill:none;stroke:#3a3a3a;stroke-width:6;stroke-linejoin:round;stroke-linecap:round}
+.clamp{fill:#8a8f96;stroke:#4a5056;stroke-width:1.5}
+.bulb-glass{fill:#f4f6f8;stroke:#9aa5b1;stroke-width:2}
+.bulb-glass.lit{fill:#ffe55c;stroke:#c9a400}
+.filament{fill:none;stroke:#7a6a4a;stroke-width:1.6}
+.power-btn{cursor:pointer}
+.power-bg{fill:#2f9e44;stroke:#1e6b2e;stroke-width:2}
+.power-btn.is-on .power-bg{fill:#e8590c;stroke:#a63c06}
+.power-text{fill:#fff;font-size:18px;font-weight:bold;text-anchor:middle;pointer-events:none}
+.ctl-label{font-size:15px;font-weight:bold;fill:var(--text);text-anchor:middle}
+.sample{cursor:grab}
+.sample-label{font-size:14px;font-weight:bold;fill:var(--text);text-anchor:middle;paint-order:stroke;stroke:var(--play-bg);stroke-width:4px;stroke-linejoin:round;pointer-events:none}
+.zone-text-sm{font-size:15px;fill:var(--muted);text-anchor:middle}
+.ptf-sym{font-size:8.5px;fill:var(--cell-faint);text-anchor:middle}
+.ptf-val{font-size:13px;font-weight:bold;fill:#1b1f23;text-anchor:middle}
+.ruler{fill:rgba(255,224,102,.88);stroke:#b08900;stroke-width:1.2}
+.ruler-tick{stroke:#5c4a00;stroke-width:1}
+.ruler-label{font-size:10px;fill:#4a3b00;text-anchor:middle}
+.radius-line{stroke:#d6336c;stroke-width:3;stroke-linecap:round}
+.radius-line.done{stroke:#2f9e44}
+.handle{fill:#e03131;stroke:#fff;stroke-width:2.5}
+.handle.done{fill:#2f9e44}
+.handle-hit{fill:transparent;cursor:ew-resize}
+.shell.hot{stroke:var(--highlight);stroke-width:2.2}
+.atom.in-zone .atom-name{display:none}
+.rd-name{font-size:24px;font-weight:bold;fill:var(--text);text-anchor:middle}
+.rd-val{font-size:32px;fill:var(--text);text-anchor:middle}
+.rd-msg{font-size:15px;fill:var(--muted);text-anchor:middle}
+.rd-msg.done{fill:#2b8a3e;font-weight:bold}
+.tray{fill:var(--tray-bg);stroke:var(--tray-stroke);stroke-width:1.5}
+.panel{fill:var(--panel-bg);stroke:var(--panel-stroke);stroke-width:1.2}
+.shell{fill:none;stroke:var(--shell);stroke-width:1.3}
+.atom{cursor:grab}
+.atom:active{cursor:grabbing}
+.atom-hit{fill:transparent}
+.nucleus{fill:url(#gNuc);stroke:#a8361a;stroke-width:1}
+.nuc-label{fill:#fff;font-weight:bold;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.e-dot{fill:url(#gEl)}
+.e-dot.inner{opacity:.8}
+.atom-name{font-size:15px;fill:var(--text);text-anchor:middle;pointer-events:none}
+.atom-en{font-size:13px;fill:var(--muted);text-anchor:middle;display:none;pointer-events:none}
+#enSvg.show-en .atom-en{display:inline}
+.badge-bg{fill:#fff;stroke:#1f5fbf;stroke-width:1.5}
+.badge-text{font-size:11px;font-weight:bold;fill:#1f5fbf;text-anchor:middle;dominant-baseline:central}
+.e-body{fill:url(#gEl);stroke:#1a4f9e;stroke-width:1.5}
+.e-halo{fill:rgba(90,160,255,.22)}
+.e-ring{fill:none;stroke:var(--highlight);stroke-width:2.5}
+.e-minus{fill:#fff;font-size:18px;font-weight:bold;text-anchor:middle;dominant-baseline:central}
+.e-label{font-size:15px;fill:var(--text);text-anchor:middle}
+.range-circle{fill:rgba(255,212,0,.13);stroke:#c98a00;stroke-width:2;stroke-dasharray:7 5}
+.dist-line{stroke:#22282e;stroke-width:1.8;stroke-dasharray:5 4}
+.dist-label{font-size:15px;fill:#111;text-anchor:middle;paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
+.hint{transition:none}
+.hint-1{font-size:19px;fill:var(--text);text-anchor:middle}
+.hint-2{font-size:15px;fill:var(--muted);text-anchor:middle}
+.inst-text{font-size:14px;fill:var(--text)}
+.inst-num{font-size:14px;font-weight:bold;fill:var(--text)}
+.home-sub{margin:-8px 0 0;font-size:clamp(15px,1.8vw,19px);color:#bdbdbd;text-align:center}
+.pt-head{cursor:pointer}
+.pt-head-bg{fill:transparent}
+.pt-title{font-size:15px;font-weight:bold;fill:var(--text)}
+.pt-toggle{font-size:15px;fill:var(--text);text-anchor:middle}
+.pt-small{font-size:11px;fill:var(--muted)}
+.pt-cell{fill:var(--cell);stroke:var(--cell-stroke);stroke-width:1}
+.pt-cell.sim{fill:#fff;stroke:#5b6670;stroke-width:1.4}
+.pt-sym{font-size:11px;fill:var(--cell-faint);text-anchor:middle}
+.pt-sym.sim{font-size:12px;font-weight:bold;fill:#222}
+.pt-val{font-size:9.5px;text-anchor:middle;font-weight:bold}
+.pt-link{font-size:12px;fill:var(--link);text-anchor:end;cursor:pointer;text-decoration:underline}
+.cb{cursor:pointer}
+.cb-box{fill:#fff;stroke:#2b3137;stroke-width:1.5}
+.cb-mark{fill:none;stroke:#111;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.cb-label{font-size:15px;fill:var(--text)}
+.cb-hit{fill:transparent}
+.reset{cursor:pointer}
+.reset-bg{fill:#f2891c;stroke:#b8600a;stroke-width:1.5}
+.reset:hover .reset-bg{fill:#ff9f3a}
+.reset-arrow{fill:none;stroke:#fff;stroke-width:3.4;stroke-linecap:round}
+
+/* Coming soon */
+.soon{flex-direction:column;gap:18px;color:var(--text);text-align:center;padding:20px}
+.soon svg{width:min(260px,60vw);height:auto;border-radius:12px}
+.soon h2{margin:0;font-weight:normal;font-size:28px}
+.soon p{margin:0;color:var(--muted);font-size:16px}
+</style>
+</head>
+<body>
+
+<!-- Shared icons and gradients -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <radialGradient id="gNuc" cx="35%" cy="35%" r="70%"><stop offset="0" stop-color="#ffb07a"/><stop offset="1" stop-color="#d2451e"/></radialGradient>
+    <radialGradient id="gEl" cx="35%" cy="35%" r="70%"><stop offset="0" stop-color="#b3d8ff"/><stop offset="1" stop-color="#1f5fbf"/></radialGradient>
+    <radialGradient id="gGlow"><stop offset="0" stop-color="#fff6a8" stop-opacity=".95"/><stop offset="1" stop-color="#ffe14d" stop-opacity="0"/></radialGradient>
+    <linearGradient id="gScale"><stop offset="0" stop-color="rgb(255,240,176)"/><stop offset="1" stop-color="rgb(196,56,18)"/></linearGradient>
+  </defs>
+
+  <symbol id="ic-en" viewBox="0 0 160 120">
+    <rect width="160" height="120" rx="10" fill="#c6e2f6"/>
+    <circle cx="108" cy="60" r="38" fill="none" stroke="#6f7d8a" stroke-width="2"/>
+    <circle cx="108" cy="60" r="23" fill="none" stroke="#6f7d8a" stroke-width="2"/>
+    <circle cx="108" cy="37" r="4" fill="url(#gEl)"/><circle cx="108" cy="83" r="4" fill="url(#gEl)"/>
+    <circle cx="108" cy="22" r="4.5" fill="url(#gEl)"/><circle cx="137.7" cy="36.3" r="4.5" fill="url(#gEl)"/>
+    <circle cx="145" cy="68.5" r="4.5" fill="url(#gEl)"/><circle cx="124.5" cy="94.2" r="4.5" fill="url(#gEl)"/>
+    <circle cx="91.5" cy="94.2" r="4.5" fill="url(#gEl)"/><circle cx="71" cy="68.5" r="4.5" fill="url(#gEl)"/>
+    <circle cx="78.3" cy="36.3" r="4.5" fill="url(#gEl)"/>
+    <circle cx="108" cy="60" r="12" fill="url(#gNuc)"/>
+    <text x="108" y="64.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#fff" font-family="Arial,Helvetica,sans-serif">F</text>
+    <circle cx="26" cy="52" r="10" fill="url(#gEl)" stroke="#1a4f9e" stroke-width="1.5"/>
+    <path d="M21 52 H31" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M41 52 H58" stroke="#e05a1a" stroke-width="4" stroke-linecap="round"/>
+    <path d="M56 44 L67 52 L56 60 Z" fill="#e05a1a"/>
+  </symbol>
+
+  <symbol id="ic-ie" viewBox="0 0 160 120">
+    <rect width="160" height="120" rx="10" fill="#c6e2f6"/>
+    <circle cx="62" cy="66" r="38" fill="none" stroke="#6f7d8a" stroke-width="2"/>
+    <circle cx="62" cy="66" r="22" fill="none" stroke="#6f7d8a" stroke-width="2"/>
+    <circle cx="62" cy="44" r="4" fill="url(#gEl)"/><circle cx="62" cy="88" r="4" fill="url(#gEl)"/>
+    <circle cx="88.9" cy="39.1" r="4.5" fill="none" stroke="#1f5fbf" stroke-width="1.5" stroke-dasharray="2.5 2"/>
+    <circle cx="62" cy="66" r="12" fill="url(#gNuc)"/>
+    <text x="62" y="70" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff" font-family="Arial,Helvetica,sans-serif">Na</text>
+    <path d="M95 34 Q110 25 120 23" stroke="#1f5fbf" stroke-width="2.5" stroke-dasharray="4 4" fill="none"/>
+    <circle cx="132" cy="21" r="10" fill="url(#gEl)" stroke="#1a4f9e" stroke-width="1.5"/>
+    <path d="M127 21 H137" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+    <polygon points="142,62 128,88 138,88 130,112 154,80 143,80 150,62" fill="#ffd400" stroke="#b38f00" stroke-width="1.5" stroke-linejoin="round"/>
+  </symbol>
+
+  <symbol id="ic-ec" viewBox="0 0 160 120">
+    <rect width="160" height="120" rx="10" fill="#c6e2f6"/>
+    <rect x="24" y="30" width="112" height="62" rx="6" fill="none" stroke="#3a3a3a" stroke-width="4"/>
+    <circle cx="80" cy="18" r="26" fill="url(#gGlow)"/>
+    <circle cx="80" cy="17" r="12" fill="#ffe55c" stroke="#c9a400" stroke-width="2"/>
+    <path d="M75 20 L77.5 13 L80 20 L82.5 13 L85 20" stroke="#a36a00" stroke-width="1.5" fill="none"/>
+    <rect x="73" y="27" width="14" height="9" rx="2" fill="#8a8f96"/>
+    <rect x="60" y="81" width="40" height="22" rx="3" fill="#3c3c3c"/>
+    <rect x="60" y="81" width="13" height="22" rx="3" fill="#c0392b"/>
+    <rect x="100" y="87" width="5" height="10" rx="1" fill="#8a8f96"/>
+    <rect x="11" y="45" width="26" height="32" rx="3" fill="#bcc5ce" stroke="#7d8790" stroke-width="2"/>
+    <circle cx="136" cy="46" r="3.6" fill="url(#gEl)"/><circle cx="136" cy="61" r="3.6" fill="url(#gEl)"/><circle cx="136" cy="76" r="3.6" fill="url(#gEl)"/>
+    <circle cx="112" cy="30" r="3.6" fill="url(#gEl)"/><circle cx="48" cy="30" r="3.6" fill="url(#gEl)"/>
+  </symbol>
+
+  <symbol id="ic-ar" viewBox="0 0 160 120">
+    <rect width="160" height="120" rx="10" fill="#c6e2f6"/>
+    <circle cx="58" cy="62" r="44" fill="none" stroke="#6f7d8a" stroke-width="2"/>
+    <circle cx="58" cy="62" r="29" fill="none" stroke="#6f7d8a" stroke-width="2"/>
+    <circle cx="58" cy="62" r="17" fill="none" stroke="#6f7d8a" stroke-width="2"/>
+    <circle cx="58" cy="62" r="9" fill="url(#gNuc)"/>
+    <path d="M58 62 H96" stroke="#e05a1a" stroke-width="3" stroke-linecap="round"/>
+    <path d="M94 56 L103 62 L94 68 Z" fill="#e05a1a"/>
+    <text x="80" y="55" text-anchor="middle" font-size="16" font-style="italic" font-weight="bold" fill="#e05a1a" font-family="Georgia,serif">r</text>
+    <circle cx="134" cy="62" r="18" fill="none" stroke="#6f7d8a" stroke-width="2"/>
+    <circle cx="134" cy="62" r="10" fill="none" stroke="#6f7d8a" stroke-width="2"/>
+    <circle cx="134" cy="62" r="5.5" fill="url(#gNuc)"/>
+  </symbol>
+</svg>
+
+<div id="app">
+  <!-- Home screen -->
+  <section class="screen home active" data-screen="home">
+    <h1 class="home-title">Periodic Trends</h1>
+    <p class="home-sub">Choose a screen to explore a periodic trend. Use the bar at the bottom to switch screens at any time.</p>
+    <div class="home-grid">
+      <button class="home-btn" data-go="electronegativity"><svg viewBox="0 0 160 120" aria-hidden="true"><use href="#ic-en"/></svg><span>Electronegativity</span></button>
+      <button class="home-btn" data-go="ionization-energy"><svg viewBox="0 0 160 120" aria-hidden="true"><use href="#ic-ie"/></svg><span>Ionization Energy</span></button>
+      <button class="home-btn" data-go="conductivity"><svg viewBox="0 0 160 120" aria-hidden="true"><use href="#ic-ec"/></svg><span>Electrical Conductivity</span></button>
+      <button class="home-btn" data-go="atomic-radius"><svg viewBox="0 0 160 120" aria-hidden="true"><use href="#ic-ar"/></svg><span>Atomic Radius</span></button>
+    </div>
+  </section>
+
+  <!-- Electronegativity screen -->
+  <section class="screen play" data-screen="electronegativity">
+    <svg id="enSvg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet" aria-label="Electronegativity simulation"></svg>
+  </section>
+
+  <!-- Placeholder screens -->
+  <section class="screen play" data-screen="ionization-energy">
+    <svg id="ieSvg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet" aria-label="Ionization energy simulation"></svg>
+  </section>
+  <section class="screen play" data-screen="conductivity">
+    <svg id="ecSvg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet" aria-label="Electrical conductivity simulation"></svg>
+  </section>
+  <section class="screen play" data-screen="atomic-radius">
+    <svg id="arSvg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet" aria-label="Atomic radius simulation"></svg>
+  </section>
+
+  <!-- PhET-style navigation bar -->
+  <nav class="navbar">
+    <div class="nav-title">Periodic Trends</div>
+    <div class="nav-center">
+      <button class="nav-btn nav-home" data-go="home" aria-label="Home">
+        <svg viewBox="0 0 24 24"><path d="M12 3 L2 12 H5 V20 H10 V15 H14 V20 H19 V12 H22 Z" fill="currentColor"/></svg>
+      </button>
+      <div class="nav-sep"></div>
+      <button class="nav-btn" data-go="electronegativity"><svg class="mini" viewBox="0 0 160 120"><use href="#ic-en"/></svg><span>Electronegativity</span></button>
+      <button class="nav-btn" data-go="ionization-energy"><svg class="mini" viewBox="0 0 160 120"><use href="#ic-ie"/></svg><span>Ionization Energy</span></button>
+      <button class="nav-btn" data-go="conductivity"><svg class="mini" viewBox="0 0 160 120"><use href="#ic-ec"/></svg><span>Conductivity</span></button>
+      <button class="nav-btn" data-go="atomic-radius"><svg class="mini" viewBox="0 0 160 120"><use href="#ic-ar"/></svg><span>Atomic Radius</span></button>
+    </div>
+    <div></div>
+  </nav>
+</div>
+
+<script>
+(function(){
+  const NS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, parent){
+    const n = document.createElementNS(NS, tag);
+    if (attrs) for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const lerp = (a,b,k) => a + (b - a) * k;
+  const ease = p => p < .5 ? 2*p*p : 1 - Math.pow(-2*p + 2, 2) / 2;
+
+  /* ---------- Navigation ---------- */
+  const SCREENS = ['home','electronegativity','ionization-energy','conductivity','atomic-radius'];
+  let current = 'home';
+  function show(id){
+    if (!SCREENS.includes(id)) id = 'home';
+    current = id;
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.dataset.screen === id));
+    document.querySelectorAll('.nav-btn[data-go]').forEach(b => b.classList.toggle('active', b.dataset.go === id));
+  }
+  function go(id){
+    show(id);
+    try { const want = id === 'home' ? '' : id; if (location.hash.slice(1) !== want) location.hash = want; } catch(_){}
+  }
+  document.addEventListener('click', ev => {
+    const b = ev.target.closest('[data-go]');
+    if (b) go(b.dataset.go);
+  });
+  window.addEventListener('hashchange', () => show(location.hash.slice(1) || 'home'));
+
+  /* ---------- Shared data ---------- */
+  const W = 1200, H = 700;
+  // Pauling electronegativity and covalent radius (pm)
+  const EL = {
+    Li:{name:'Lithium',  en:0.98, rpm:128, shells:[2,1]},
+    B: {name:'Boron',    en:2.04, rpm:84,  shells:[2,3]},
+    N: {name:'Nitrogen', en:3.04, rpm:71,  shells:[2,5]},
+    F: {name:'Fluorine', en:3.98, rpm:57,  shells:[2,7]},
+    Na:{name:'Sodium',   en:0.93, rpm:166, shells:[2,8,1]},
+    Cl:{name:'Chlorine', en:3.16, rpm:102, shells:[2,8,7]},
+    Br:{name:'Bromine',  en:2.96, rpm:120, shells:[2,8,18,7]},
+    I: {name:'Iodine',   en:2.66, rpm:139, shells:[2,8,18,18,7]}
+  };
+  const PT_ROWS = [
+    ['H','','','','','','','He'],
+    ['Li','Be','B','C','N','O','F','Ne'],
+    ['Na','Mg','Al','Si','P','S','Cl','Ar'],
+    ['K','Ca','Ga','Ge','As','Se','Br','Kr'],
+    ['Rb','Sr','In','Sn','Sb','Te','I','Xe']
+  ];
+  const GROUPS = ['1','2','13','14','15','16','17','18'];
+
+  /* ---------- Electronegativity screen ---------- */
+  (function(){
+    const svg = document.getElementById('enSvg');
+    const toLocal = svgPointer(svg);
+    // Every atom bonds with the same partner, hydrogen (EN 2.20), so the pull reflects the chosen atom alone.
+    const H_EN = 2.20;
+    const R0 = 26, BS = 1.6;                 // atom circle radius in the tray, and its scale in the bond
+    const HR = 22;                           // partner (hydrogen) radius before scaling
+    const ZONE = {x:110, y:440, w:820, h:248};
+    const XA = {x:230, y:572}, HA = {x:810, y:572};   // atom centers in the bond (bond length is exaggerated)
+    const L1 = XA.x + R0 * BS, L2 = HA.x - HR * BS; // ends of the bond line
+    const S = {x:(L1 + L2) / 2, y:XA.y};            // starting location of the shared pair
+    const VPX = 9;                                   // exaggerated: px the pair moves per displayed unit
+    const COLORS = {Li:'#c79bff', Na:'#a98bf0', B:'#ffb38a', N:'#7f9cff', F:'#a6e36b', Cl:'#57d18f', Br:'#c95a55', I:'#9a5fc4'};
+    const LIGHT_TEXT = {Br:1, I:1};
+    const pullOf = a => Math.round((a.en - H_EN) * 10);
+    const fmt = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v);
+    const ORDER = ['N','Na','F','Li','Br','B','I','Cl'];
+    let recorded = {}, drag = null, bond = null;
+
+    el('rect', {x:0, y:0, width:W, height:H, fill:'transparent'}, svg);
+    const gTray = el('g', {}, svg);
+    const gZone = el('g', {}, svg);
+    const gHint = el('g', {class:'hint'}, svg);
+    const gPanel = el('g', {}, svg);
+    const gReset = el('g', {}, svg);
+    const gBond = el('g', {style:'pointer-events:none'}, svg);
+    const gPartner = el('g', {style:'pointer-events:none'}, svg);
+    const gAtoms = el('g', {}, svg);
+    const gPair = el('g', {style:'pointer-events:none'}, svg);
+    const gRead = el('g', {style:'pointer-events:none'}, svg);
+
+    makeTray(gTray, ORDER.map(s => EL[s].name));
+    const zoneRect = el('rect', {x:ZONE.x, y:ZONE.y, width:ZONE.w, height:ZONE.h, rx:18, class:'drop-zone'}, gZone);
+    const zoneText = el('text', {x:ZONE.x + ZONE.w / 2, y:ZONE.y + ZONE.h / 2 + 7, class:'zone-text'}, gZone);
+    zoneText.textContent = 'Drag or tap an atom to form a bond';
+    // Double-sided ruler (no units): 0 is where the shared electrons start
+    const RU = 20;
+    const rul = el('g', {transform:`translate(${S.x},${S.y + 42})`, style:'pointer-events:none'}, gZone);
+    el('rect', {x:-RU * VPX - 16, y:0, width:2 * RU * VPX + 32, height:30, rx:3, class:'ruler'}, rul);
+    for (let u = -RU; u <= RU; u++){
+      const x = -u * VPX, major = u % 5 === 0;
+      el('line', {x1:x, y1:0, x2:x, y2:major ? 12 : 6, class:'ruler-tick'}, rul);
+      if (major){ const tl = el('text', {x, y:25, class:'ruler-label'}, rul); tl.textContent = u === 0 ? '0' : (u > 0 ? '+' : '−') + Math.abs(u); }
+    }
+    const rc1 = el('text', {x:-RU * VPX - 16, y:48, class:'ruler-caption', style:'text-anchor:start'}, rul); rc1.textContent = '← toward your atom';
+    const rc2 = el('text', {x:RU * VPX + 16, y:48, class:'ruler-caption', style:'text-anchor:end'}, rul); rc2.textContent = 'toward the partner →';
+    function inZone(a){ return a.x > ZONE.x && a.x < ZONE.x + ZONE.w && a.y > ZONE.y && a.y < ZONE.y + ZONE.h; }
+
+    makeInstructions(gHint, 482, 14, 448, [
+      ['1.','Drag an atom into the bonding box (or tap it).'],
+      ['2.','It bonds to a partner atom. Watch the shared electron pair.'],
+      ['3.','The pull is recorded: + toward your atom, − away from it.'],
+      ['4.','Return the atom to the tray and test the next one.']
+    ]);
+
+    const PT = buildMainPT(gPanel, 'translate(18,14) scale(1.5)', 'Pull on shared electrons', 'away (−)', 'toward (+)', -14, 20,
+      () => recorded, () => { recorded = {}; PT.update(); }, fmt);
+
+    /* Readout panel */
+    el('rect', {x:482, y:146, width:448, height:279, rx:8, class:'panel'}, gPanel);
+    const rdEmpty = el('text', {x:706, y:290, class:'rd-msg'}, gPanel); rdEmpty.textContent = 'Pick an atom to see how hard it pulls.';
+    const rd1 = el('text', {x:706, y:196, class:'rd-msg'}, gRead); rd1.textContent = 'Your atom';
+    const rd2 = el('text', {x:706, y:232, class:'rd-name'}, gRead);
+    const rd3 = el('text', {x:706, y:290, class:'rd-msg'}, gRead); rd3.textContent = 'Pull on shared electrons';
+    const rd4 = el('text', {x:706, y:346, class:'rd-val big'}, gRead);
+    const rd5 = el('text', {x:706, y:384, class:'rd-msg'}, gRead);
+
+    /* Atoms: plain circles with the element symbol */
+    const atoms = [];
+    function buildAtom(sym, i){
+      const d = EL[sym], p = traySlot(i);
+      const a = Object.assign({sym, x:p.x, y:p.y, hx:p.x, hy:p.y, anim:null, s:1, ts:1}, d);
+      a.g = el('g', {class:'atom'}, gAtoms);
+      el('circle', {r:R0 + 6, class:'atom-hit'}, a.g);
+      el('circle', {r:R0, fill:COLORS[sym], stroke:'#3b4756', 'stroke-width':1.5}, a.g);
+      el('ellipse', {cx:-8, cy:-10, rx:8, ry:5, fill:'#fff', opacity:.4}, a.g);
+      const t = el('text', {class:'sym-label', fill:LIGHT_TEXT[sym] ? '#fff' : '#1b1f23'}, a.g); t.textContent = sym;
+      a.g.addEventListener('pointerdown', ev => startDrag(ev, a));
+      return a;
+    }
+    ORDER.forEach((s, i) => atoms.push(buildAtom(s, i)));
+
+    /* Partner atom (hydrogen) and the bond line */
+    const partner = {x:HA.x + 120, op:0, anim:null};
+    partner.g = el('g', {style:'opacity:0'}, gPartner);
+    el('circle', {r:HR, fill:'#f4f6f8', stroke:'#3b4756', 'stroke-width':1.5}, partner.g);
+    const pl = el('text', {class:'sym-label', fill:'#1b1f23'}, partner.g); pl.textContent = 'H';
+    const bondLine = el('line', {x1:L1, y1:S.y, x2:L2, y2:S.y, class:'bond-line', style:'opacity:0'}, gBond);
+    const startLine = el('line', {x1:S.x, y1:S.y - 34, x2:S.x, y2:S.y + 42, class:'start-line'}, gBond);
+    const startLbl = el('text', {x:S.x, y:S.y - 40, class:'start-label'}, gBond); startLbl.textContent = 'start';
+
+    /* Shared electron pair, pull arrow, partial charges */
+    const arrowLine = el('line', {class:'pull-arrow'}, gPair);
+    const arrowHead = el('polygon', {points:'0,0 -10,-7 -10,7', class:'pull-head'}, gPair);
+    const pairG = el('g', {}, gPair);
+    el('circle', {cx:-7, cy:0, r:9, class:'pair-ring'}, pairG);
+    el('circle', {cx:7, cy:0, r:9, class:'pair-ring'}, pairG);
+    el('circle', {cx:-7, cy:0, r:5.5, class:'e-dot'}, pairG);
+    el('circle', {cx:7, cy:0, r:5.5, class:'e-dot'}, pairG);
+    const dX = el('text', {class:'delta'}, gPair);
+    const dH = el('text', {class:'delta'}, gPair);
+
+    function placeInBond(a, t){
+      if (bond && bond.a !== a) release(bond.a, t, true);
+      bond = {a, t0:t, done:false};
+      a.ts = BS;
+      a.anim = {fx:a.x, fy:a.y, tx:XA.x, ty:XA.y, start:t, dur:350};
+      partner.anim = {fx:HA.x + 120, tx:HA.x, start:t + 250, dur:450};
+      partner.x = HA.x + 120;
+    }
+    function release(a, t, goHome){
+      if (bond && bond.a === a) bond = null;
+      a.ts = 1;
+      if (goHome) a.anim = {fx:a.x, fy:a.y, tx:a.hx, ty:a.hy, start:t, dur:450};
+    }
+    function startDrag(ev, a){
+      ev.preventDefault();
+      a.anim = null;
+      const wasBonded = !!(bond && bond.a === a);
+      if (wasBonded) release(a, performance.now(), false);
+      const p = toLocal(ev);
+      drag = {a, id:ev.pointerId, dx:a.x - p.x, dy:a.y - p.y, px:p.x, py:p.y, wasBonded};
+      gAtoms.appendChild(a.g);
+      try { svg.setPointerCapture(ev.pointerId); } catch(_){}
+    }
+    svg.addEventListener('pointermove', ev => {
+      if (!drag || ev.pointerId !== drag.id) return;
+      const p = toLocal(ev), a = drag.a, r = R0 * a.s;
+      a.x = clamp(p.x + drag.dx, r + 4, W - r - 4);
+      a.y = clamp(p.y + drag.dy, r + 4, H - r - 4);
+    });
+    ['pointerup','pointercancel','lostpointercapture'].forEach(n => svg.addEventListener(n, ev => {
+      if (!drag || ev.pointerId !== drag.id) return;
+      const d = drag, a = d.a, t = performance.now();
+      drag = null;
+      let tapped = false;
+      if (n === 'pointerup'){ const p = toLocal(ev); tapped = Math.hypot(p.x - d.px, p.y - d.py) < 6; }
+      if ((tapped && !d.wasBonded) || inZone(a)) placeInBond(a, t);
+      else release(a, t, true);
+    }));
+
+    makeReset(gReset, () => {
+      const t = performance.now();
+      drag = null;
+      if (bond) release(bond.a, t, false);
+      bond = null;
+      atoms.forEach(a => { a.ts = 1; a.anim = {fx:a.x, fy:a.y, tx:a.hx, ty:a.hy, start:t, dur:450}; });
+    });
+
+    function frame(t){
+      if (current === 'electronegativity'){
+        atoms.forEach(a => {
+          if (a.anim){
+            const p = clamp((t - a.anim.start) / a.anim.dur, 0, 1), k = ease(p);
+            a.x = lerp(a.anim.fx, a.anim.tx, k); a.y = lerp(a.anim.fy, a.anim.ty, k);
+            if (p >= 1) a.anim = null;
+          }
+          a.s += (a.ts - a.s) * 0.2;
+          if (Math.abs(a.ts - a.s) < 0.002) a.s = a.ts;
+          a.g.setAttribute('transform', `translate(${a.x.toFixed(1)},${a.y.toFixed(1)}) scale(${a.s.toFixed(3)})`);
+        });
+
+        // Partner slides in while bonded and fades away otherwise
+        let targetOp = 0;
+        if (bond && partner.anim){
+          const pa = partner.anim, p = clamp((t - pa.start) / pa.dur, 0, 1), k = ease(p);
+          partner.x = lerp(pa.fx, pa.tx, k);
+          targetOp = k;
+        }
+        partner.op += (targetOp - partner.op) * 0.25;
+        partner.g.style.opacity = partner.op.toFixed(3);
+        partner.g.setAttribute('transform', `translate(${partner.x.toFixed(1)},${HA.y}) scale(${BS})`);
+        const lineOp = bond ? clamp((t - bond.t0 - 600) / 300, 0, 1) : 0;
+        bondLine.style.opacity = lineOp.toFixed(2);
+        startLine.style.display = startLbl.style.display = lineOp > 0 ? '' : 'none';
+
+        const showPair = bond && t > bond.t0 + 800;
+        gPair.style.display = showPair ? '' : 'none';
+        gRead.style.display = bond ? '' : 'none';
+        rdEmpty.style.display = bond ? 'none' : '';
+        if (bond){
+          const a = bond.a;
+          const k = ease(clamp((t - bond.t0 - 1000) / 1500, 0, 1));
+          const units = (a.en - H_EN) * 10 * k;     // + toward the chosen atom (left)
+          const shift = units * VPX;
+          const px = S.x - shift;
+          pairG.setAttribute('transform', `translate(${px.toFixed(1)},${S.y})`);
+          const big = Math.abs(shift) >= 12;
+          arrowLine.style.display = arrowHead.style.display = big ? '' : 'none';
+          if (big){
+            const ay = S.y + 30, dir = shift > 0 ? -1 : 1;
+            arrowLine.setAttribute('x1', S.x); arrowLine.setAttribute('y1', ay);
+            arrowLine.setAttribute('x2', (px - dir * 6).toFixed(1)); arrowLine.setAttribute('y2', ay);
+            arrowHead.setAttribute('transform', `translate(${px.toFixed(1)},${ay}) scale(${dir},1)`);
+          }
+          rd2.textContent = a.name;
+          rd4.textContent = fmt(Math.round(units));
+          if (k >= 1 && !bond.done){
+            bond.done = true;
+            recorded[a.sym] = pullOf(a);
+            PT.update();
+          }
+          const v = pullOf(a);
+          rd5.textContent = !bond.done ? '' : v > 0 ? 'toward your atom' : v < 0 ? 'away from your atom' : 'shared evenly';
+          const showD = bond.done && v !== 0;
+          dX.style.display = dH.style.display = showD ? '' : 'none';
+          if (showD){
+            dX.setAttribute('x', XA.x); dX.setAttribute('y', (XA.y - R0 * BS - 14).toFixed(1));
+            dH.setAttribute('x', HA.x); dH.setAttribute('y', (HA.y - HR * BS - 14).toFixed(1));
+            dX.textContent = v > 0 ? 'δ−' : 'δ+';
+            dH.textContent = v > 0 ? 'δ+' : 'δ−';
+            dX.setAttribute('class', 'delta ' + (v > 0 ? 'neg' : 'pos'));
+            dH.setAttribute('class', 'delta ' + (v > 0 ? 'pos' : 'neg'));
+          }
+        }
+
+        const over = drag && inZone(drag.a);
+        zoneRect.classList.toggle('hot', !!over);
+        zoneText.style.display = (bond || over) ? 'none' : '';
+        PT.highlight(drag ? drag.a.sym : (bond ? bond.a.sym : null));
+      }
+      requestAnimationFrame(frame);
+    }
+    PT.update();
+    requestAnimationFrame(frame);
+  })();
+
+  /* ---------- Ionization energy screen ---------- */
+  (function(){
+    const svg = document.getElementById('ieSvg');
+    // First ionization energies (kJ/mol); strength needed = IE / 20, rounded
+    const IE_KJ = {Li:520, B:801, N:1402, F:1681, Na:496, Cl:1251, Br:1140, I:1008};
+    const ZONE = {x:430, y:20, w:490, h:310, cx:620, cy:185};
+    const TS = 0.55, ZS = 1.6;   // atom scale in the tray and in the box
+    const TIP = {x:362, y:185};
+    const TX0 = 58, TX1 = 342, TY = 396;
+    const EJ = -Math.PI / 4;   // direction the ejected electron flies: away from the ejector and the atom
+    let strength = 0, recorded = {}, drag = null, sliderDrag = null, zoneAtom = null, fly = null, flashT = -1e9, hintHidden = false, burst = null;
+
+    function toLocal(ev){
+      const pt = svg.createSVGPoint();
+      pt.x = ev.clientX; pt.y = ev.clientY;
+      return pt.matrixTransform(svg.getScreenCTM().inverse());
+    }
+
+    const defs = el('defs', {}, svg);
+    const lg = el('linearGradient', {id:'gGun', x1:0, y1:0, x2:0, y2:1}, defs);
+    el('stop', {offset:0, 'stop-color':'#8496aa'}, lg);
+    el('stop', {offset:1, 'stop-color':'#3b4756'}, lg);
+
+    el('rect', {x:0, y:0, width:W, height:H, fill:'transparent'}, svg);
+    const gTray = el('g', {}, svg);
+    const gZone = el('g', {}, svg);
+    const gHint = el('g', {class:'hint'}, svg);
+    const gPanel = el('g', {}, svg);
+    const gField = el('g', {style:'pointer-events:none'}, svg);
+    const gGun = el('g', {}, svg);
+    const gSlider = el('g', {}, svg);
+    const gReset = el('g', {}, svg);
+    const gAtoms = el('g', {}, svg);
+    const gFly = el('g', {style:'pointer-events:none'}, svg);
+
+    makeTray(gTray, ['Nitrogen','Sodium','Fluorine','Lithium','Bromine','Boron','Iodine','Chlorine']);
+
+    /* Drop zone */
+    const zoneRect = el('rect', {x:ZONE.x, y:ZONE.y, width:ZONE.w, height:ZONE.h, rx:18, class:'drop-zone'}, gZone);
+    const zoneText = el('text', {x:ZONE.cx, y:ZONE.cy + 7, class:'zone-text'}, gZone);
+    zoneText.textContent = 'Drag an atom here';
+    const status = el('text', {x:ZONE.cx, y:ZONE.y + ZONE.h - 14, class:'status-text'}, gZone);
+    const zoneName = el('text', {x:ZONE.cx, y:ZONE.y + 32, class:'zone-name'}, gZone);
+    function inZone(a){ return a.x > ZONE.x && a.x < ZONE.x + ZONE.w && a.y > ZONE.y && a.y < ZONE.y + ZONE.h; }
+
+    /* Hint */
+    makeInstructions(gHint, 30, 440, 340, [
+      ['1.','Drag an atom into the box.'],
+      ['2.','Slowly raise the energy until the'],
+      ['','ejector knocks an electron off.'],
+      ['3.','The energy needed is recorded.'],
+      ['4.','Return the atom to the tray and'],
+      ['','test the next one.']
+    ]);
+
+    /* Electron stealer */
+    el('path', {d:'M112 222 L168 222 L150 298 Q148 304 142 304 L104 304 Q97 304 98 297 Z', class:'gun-dark'}, gGun);
+    el('rect', {x:48, y:160, width:24, height:50, rx:6, class:'gun-dark'}, gGun);
+    el('rect', {x:62, y:142, width:240, height:86, rx:18, fill:'url(#gGun)', stroke:'#1d252e', 'stroke-width':2}, gGun);
+    el('rect', {x:296, y:166, width:38, height:38, rx:4, fill:'#6f7f90', stroke:'#1d252e', 'stroke-width':2}, gGun);
+    el('path', {d:'M332 160 L362 146 L362 224 L332 210 Z', fill:'#9aa9b8', stroke:'#1d252e', 'stroke-width':2, 'stroke-linejoin':'round'}, gGun);
+    const gl = el('text', {x:182, y:182, class:'gun-label'}, gGun); gl.textContent = 'Electron Ejector';
+    el('rect', {x:92, y:198, width:180, height:10, rx:5, class:'gun-meter'}, gGun);
+    const meterFill = el('rect', {x:92, y:198, width:0, height:10, rx:5, class:'gun-meter-fill'}, gGun);
+    const glow = el('circle', {cx:TIP.x, cy:TIP.y, r:8, class:'nozzle-glow'}, gGun);
+    const arcs = [0,1,2,3].map(() => el('path', {d:'M0 -20 Q12 0 0 20', class:'field-arc'}, gField));
+
+    /* Strength slider */
+    el('rect', {x:30, y:322, width:340, height:112, rx:8, class:'panel'}, gSlider);
+    const stt = el('text', {x:46, y:351, class:'slider-title'}, gSlider); stt.textContent = 'Energy';
+    function arrowBtn(x, dir){
+      const g = el('g', {}, gSlider);
+      el('rect', {x, y:332, width:24, height:26, rx:4, class:'arrow-btn'}, g);
+      const c = x + 12;
+      const pts = dir < 0 ? [[c+4,338],[c-5,345],[c+4,352]] : [[c-4,338],[c+5,345],[c-4,352]];
+      el('polygon', {points: pts.map(p => p.join(',')).join(' '), class:'arrow-glyph'}, g);
+      g.addEventListener('click', () => setStrength(strength + dir));
+    }
+    arrowBtn(248, -1);
+    el('rect', {x:276, y:332, width:50, height:26, rx:4, class:'value-box'}, gSlider);
+    const valText = el('text', {x:301, y:351, class:'value-text'}, gSlider);
+    arrowBtn(330, 1);
+    const sl = el('g', {}, gSlider);
+    el('rect', {x:TX0, y:TY - 3, width:TX1 - TX0, height:6, rx:3, class:'slider-track'}, sl);
+    const slFill = el('rect', {x:TX0, y:TY - 3, width:0, height:6, rx:3, class:'slider-fill'}, sl);
+    [0,25,50,75,100].forEach(v => {
+      const x = TX0 + v / 100 * (TX1 - TX0);
+      el('line', {x1:x, y1:TY + 9, x2:x, y2:TY + 17, class:'slider-tick'}, sl);
+      const tl = el('text', {x, y:TY + 31, class:'slider-tick-label'}, sl); tl.textContent = v;
+    });
+    const thumb = el('g', {}, sl);
+    el('rect', {x:-8, y:-14, width:16, height:28, rx:3, class:'slider-thumb'}, thumb);
+    el('line', {x1:0, y1:-8, x2:0, y2:8, class:'slider-thumb-line'}, thumb);
+    el('rect', {x:TX0 - 12, y:TY - 20, width:TX1 - TX0 + 24, height:40, class:'slider-hit'}, sl);
+
+    function setStrength(v){
+      strength = clamp(Math.round(v), 0, 100);
+      const x = TX0 + strength / 100 * (TX1 - TX0);
+      thumb.setAttribute('transform', `translate(${x.toFixed(1)},${TY})`);
+      slFill.setAttribute('width', (x - TX0).toFixed(1));
+      valText.textContent = strength;
+      meterFill.setAttribute('width', (180 * strength / 100).toFixed(1));
+    }
+    sl.addEventListener('pointerdown', ev => {
+      ev.preventDefault();
+      sliderDrag = ev.pointerId;
+      try { svg.setPointerCapture(ev.pointerId); } catch(_){}
+      setStrength((toLocal(ev).x - TX0) / (TX1 - TX0) * 100);
+    });
+
+    /* Periodic table panel */
+    const PT = (function(){
+      const P = el('g', {transform:'translate(392,336) scale(1.3)'}, gPanel);
+      const pBg = el('rect', {x:0, y:0, width:300, height:274, rx:8, class:'panel'}, P);
+      const head = el('g', {class:'pt-head'}, P);
+      el('rect', {x:0, y:0, width:300, height:32, class:'pt-head-bg'}, head);
+      const ttl = el('text', {x:12, y:22, class:'pt-title'}, head); ttl.textContent = 'Periodic Table';
+      const arrow = el('text', {x:284, y:22, class:'pt-toggle'}, head); arrow.textContent = '▾';
+      const body = el('g', {}, P);
+      const gc = el('text', {x:168, y:46, class:'pt-small', 'text-anchor':'middle'}, body); gc.textContent = 'Group';
+      GROUPS.forEach((g, c) => { const t = el('text', {x:40 + c*32 + 15, y:60, class:'pt-small', 'text-anchor':'middle'}, body); t.textContent = g; });
+      const pc = el('text', {x:14, y:141, class:'pt-small', 'text-anchor':'middle', transform:'rotate(-90 14 141)'}, body); pc.textContent = 'Period';
+      const cellsIE = {};
+      PT_ROWS.forEach((row, r) => {
+        const rl = el('text', {x:30, y:66 + r*30 + 18, class:'pt-small', 'text-anchor':'middle'}, body); rl.textContent = r + 1;
+        row.forEach((sym, c) => {
+          if (!sym) return;
+          const x = 40 + c*32, y = 66 + r*30, sim = !!EL[sym];
+          const rect = el('rect', {x, y, width:30, height:28, rx:3, class:'pt-cell' + (sim ? ' sim' : '')}, body);
+          const st = el('text', {x:x + 15, y: sim ? y + 13 : y + 18, class:'pt-sym' + (sim ? ' sim' : '')}, body);
+          st.textContent = sym;
+          if (sim){ const vt = el('text', {x:x + 15, y:y + 24.5, class:'pt-val'}, body); cellsIE[sym] = {rect, sym:st, val:vt}; }
+        });
+      });
+      const lc = el('text', {x:40, y:236, class:'pt-small'}, body); lc.textContent = 'Energy needed';
+      el('rect', {x:40, y:242, width:150, height:9, rx:2, fill:'url(#gScale)', stroke:'#9aa3ab', 'stroke-width':.8}, body);
+      const lo = el('text', {x:40, y:264, class:'pt-small'}, body); lo.textContent = 'low';
+      const hi = el('text', {x:190, y:264, class:'pt-small', 'text-anchor':'end'}, body); hi.textContent = 'high';
+      const clr = el('text', {x:288, y:264, class:'pt-link'}, body); clr.textContent = 'Clear data';
+      clr.addEventListener('click', () => { recorded = {}; update(); });
+      let open = true;
+      head.addEventListener('click', () => {
+        open = !open;
+        body.style.display = open ? '' : 'none';
+        pBg.setAttribute('height', open ? 274 : 32);
+        arrow.textContent = open ? '▾' : '▸';
+      });
+      function update(){
+        for (const sym in cellsIE){
+          const c = cellsIE[sym], v = recorded[sym];
+          if (v != null){
+            const t = clamp((v - 20) / 70, 0, 1), dark = t > 0.55;
+            c.rect.style.fill = `rgb(${Math.round(lerp(255,196,t))},${Math.round(lerp(240,56,t))},${Math.round(lerp(176,18,t))})`;
+            c.sym.style.fill = dark ? '#fff' : '#222';
+            c.val.style.fill = dark ? '#fff' : '#333';
+            c.val.textContent = v;
+          } else { c.rect.style.fill = ''; c.sym.style.fill = ''; c.val.textContent = ''; }
+        }
+      }
+      let last = null;
+      function highlight(sym){
+        if (sym === last) return;
+        if (last && cellsIE[last]){ cellsIE[last].rect.style.stroke = ''; cellsIE[last].rect.style.strokeWidth = ''; }
+        if (sym && cellsIE[sym]){ cellsIE[sym].rect.style.stroke = '#e09a00'; cellsIE[sym].rect.style.strokeWidth = '3'; }
+        last = sym;
+      }
+      return {update, highlight};
+    })();
+
+    /* Atoms */
+    const atoms = [];
+    function makeAtom(sym, hx, hy){
+      const d = EL[sym];
+      const a = Object.assign({sym, x:hx, y:hy, hx, hy, anim:null, removed:false, s:TS, ts:TS}, d);
+      a.R = 18 + d.rpm * 0.3; a.nucR = 13; a.need = Math.round(IE_KJ[sym] / 20);
+      a.g = el('g', {class:'atom'}, gAtoms);
+      el('circle', {r:a.R + 8, class:'atom-hit'}, a.g);
+      const n = d.shells.length, shellR = [];
+      for (let k = 1; k <= n; k++){
+        const r = a.nucR + 4 + (a.R - a.nucR - 4) * k / n;
+        shellR.push(r);
+        el('circle', {r:r.toFixed(2), class:'shell'}, a.g);
+      }
+      for (let k = 0; k < n - 1; k++){
+        const c = d.shells[k], r = shellR[k];
+        for (let i = 0; i < c; i++){
+          const ang = -Math.PI/2 + i * 2 * Math.PI / c + k * 0.4;
+          el('circle', {cx:(r*Math.cos(ang)).toFixed(2), cy:(r*Math.sin(ang)).toFixed(2), r:3.3, class:'e-dot inner'}, a.g);
+        }
+      }
+      // Valence electrons; the one at the upper right is the one that gets ejected
+      const v = d.shells[n - 1];
+      for (let i = 1; i < v; i++){
+        const ang = EJ + i * 2 * Math.PI / v;
+        el('circle', {cx:(a.R*Math.cos(ang)).toFixed(2), cy:(a.R*Math.sin(ang)).toFixed(2), r:4, class:'e-dot'}, a.g);
+      }
+      a.slot = el('circle', {cx:(a.R*Math.cos(EJ)).toFixed(2), cy:(a.R*Math.sin(EJ)).toFixed(2), r:4.5, class:'e-slot', style:'display:none'}, a.g);
+      a.target = el('circle', {cx:(a.R*Math.cos(EJ)).toFixed(2), cy:(a.R*Math.sin(EJ)).toFixed(2), r:4, class:'e-dot'}, a.g);
+      el('circle', {r:a.nucR, class:'nucleus'}, a.g);
+      const t = el('text', {class:'nuc-label', 'font-size': sym.length > 1 ? 11 : 13}, a.g); t.textContent = sym;
+      const nm = el('text', {y:(a.R + 19).toFixed(1), class:'atom-name'}, a.g); nm.textContent = d.name;
+      a.badge = el('g', {transform:`translate(${(-a.R*0.72-9).toFixed(1)},${(-a.R*0.72-9).toFixed(1)})`, class:'badge-pos', style:'display:none'}, a.g);
+      el('circle', {r:11, class:'badge-bg'}, a.badge);
+      const bt = el('text', {class:'badge-text'}, a.badge); bt.textContent = '1+';
+      a.g.addEventListener('pointerdown', ev => startDrag(ev, a));
+      return a;
+    }
+    ['N','Na','F','Li','Br','B','I','Cl'].forEach((s, i) => { const p = traySlot(i); atoms.push(makeAtom(s, p.x, p.y)); });
+
+    const flyC = el('circle', {r:5, class:'e-body', style:'display:none'}, gFly);
+    const burstC = el('circle', {r:6, class:'burst', style:'display:none'}, gFly);
+
+    function restore(a){
+      a.removed = false;
+      a.target.style.display = '';
+      a.slot.style.display = 'none';
+      a.badge.style.display = 'none';
+    }
+    function sendHome(a, t){
+      restore(a);
+      a.ts = TS;
+      a.anim = {fx:a.x, fy:a.y, tx:a.hx, ty:a.hy, start:t, dur:450};
+    }
+    function removeElectron(a, t){
+      const x0 = a.x + parseFloat(a.target.getAttribute('cx')) * a.s, y0 = a.y + parseFloat(a.target.getAttribute('cy')) * a.s;
+      a.removed = true;
+      a.target.style.display = 'none';
+      a.slot.style.display = '';
+      a.badge.style.display = '';
+      fly = {x0, y0, start:t, dur:850};
+      burst = {x:x0, y:y0, start:t};
+      flashT = t;
+      recorded[a.sym] = a.need;
+      PT.update();
+      status.textContent = 'Electron ejected! Energy: ' + a.need;
+      if (!hintHidden){ hintHidden = true; gHint.classList.add('gone'); }
+    }
+
+    function startDrag(ev, a){
+      ev.preventDefault();
+      a.anim = null;
+      if (zoneAtom === a){ zoneAtom = null; status.textContent = ''; }
+      a.ts = TS;
+      const p = toLocal(ev);
+      drag = {a, id:ev.pointerId, dx:a.x - p.x, dy:a.y - p.y};
+      gAtoms.appendChild(a.g);
+      try { svg.setPointerCapture(ev.pointerId); } catch(_){}
+    }
+    svg.addEventListener('pointermove', ev => {
+      if (sliderDrag === ev.pointerId){ setStrength((toLocal(ev).x - TX0) / (TX1 - TX0) * 100); return; }
+      if (!drag || ev.pointerId !== drag.id) return;
+      const p = toLocal(ev), a = drag.a;
+      const r = a.R * a.s;
+      a.x = clamp(p.x + drag.dx, r + 4, W - r - 4);
+      a.y = clamp(p.y + drag.dy, r + 4, H - r - 4);
+    });
+    ['pointerup','pointercancel','lostpointercapture'].forEach(n => svg.addEventListener(n, ev => {
+      if (sliderDrag === ev.pointerId) sliderDrag = null;
+      if (!drag || ev.pointerId !== drag.id) return;
+      const a = drag.a, t = performance.now();
+      drag = null;
+      if (inZone(a)){
+        if (zoneAtom && zoneAtom !== a) sendHome(zoneAtom, t);
+        restore(a);
+        zoneAtom = a;
+        status.textContent = '';
+        a.ts = ZS;
+        a.anim = {fx:a.x, fy:a.y, tx:ZONE.cx, ty:ZONE.cy, start:t, dur:300};
+        setStrength(0); // each new trial starts from zero
+      } else {
+        sendHome(a, t);
+      }
+    }));
+
+    /* Reset (bottom left) */
+    const rg = el('g', {class:'reset', transform:'translate(56,636)'}, gReset);
+    const rtl = el('title', {}, rg); rtl.textContent = 'Reset';
+    el('circle', {r:30, class:'reset-bg'}, rg);
+    const ra = el('g', {transform:'scale(1.35)'}, rg);
+    el('path', {d:'M11.8 2.1 A12 12 0 1 1 6 -10.4', class:'reset-arrow'}, ra);
+    el('polygon', {points:'12.4,-6.6 3.2,-6 8.8,-15', fill:'#fff'}, ra);
+    rg.addEventListener('click', () => {
+      const t = performance.now();
+      drag = null; sliderDrag = null; zoneAtom = null; fly = null; burst = null;
+      burstC.style.display = 'none';
+      flyC.style.display = 'none';
+      status.textContent = '';
+      atoms.forEach(a => sendHome(a, t));
+      setStrength(0);
+    });
+
+    function render(t){
+      atoms.forEach(a => {
+        a.s += (a.ts - a.s) * 0.2;
+        if (Math.abs(a.ts - a.s) < 0.002) a.s = a.ts;
+        a.g.setAttribute('transform', `translate(${a.x.toFixed(1)},${a.y.toFixed(1)}) scale(${a.s.toFixed(3)})`);
+        if (a.removed) return;
+        // The targeted electron gains energy: it bounces farther out and shakes harder as energy rises
+        let rr = a.R, jx = 0, jy = 0;
+        if (a === zoneAtom && !a.anim){
+          const r = clamp(strength / a.need, 0, 1);
+          rr += 7 * r * r;
+          const amp = 2.8 * r * r;
+          jx = Math.sin(t / 21) * amp; jy = Math.cos(t / 27) * amp;
+        }
+        a.target.setAttribute('cx', (rr * Math.cos(EJ) + jx).toFixed(2));
+        a.target.setAttribute('cy', (rr * Math.sin(EJ) + jy).toFixed(2));
+      });
+
+      if (fly){
+        // Ejected electron shoots away from both the ejector and the atom, then fades
+        const p = clamp((t - fly.start) / fly.dur, 0, 1), k = 1 - Math.pow(1 - p, 2);
+        flyC.style.display = '';
+        flyC.setAttribute('cx', (fly.x0 + Math.cos(EJ) * 300 * k).toFixed(1));
+        flyC.setAttribute('cy', (fly.y0 + Math.sin(EJ) * 300 * k).toFixed(1));
+        flyC.style.opacity = (1 - p * p).toFixed(2);
+        if (p >= 1){ fly = null; flyC.style.display = 'none'; }
+      }
+      if (burst){
+        const p = clamp((t - burst.start) / 450, 0, 1);
+        burstC.style.display = '';
+        burstC.setAttribute('cx', burst.x.toFixed(1)); burstC.setAttribute('cy', burst.y.toFixed(1));
+        burstC.setAttribute('r', (6 + 26 * p).toFixed(1));
+        burstC.style.opacity = (1 - p).toFixed(2);
+        if (p >= 1){ burst = null; burstC.style.display = 'none'; }
+      }
+
+      const fl = clamp(1 - (t - flashT) / 400, 0, 1);
+      glow.setAttribute('r', (6 + strength * 0.1 + fl * 10).toFixed(1));
+      glow.style.opacity = Math.min(1, 0.25 + strength / 100 * 0.6 + fl * 0.4).toFixed(2);
+
+      const start = TIP.x + 10;
+      const end = zoneAtom ? Math.max(start + 60, zoneAtom.x - zoneAtom.R * zoneAtom.s - 12) : ZONE.x + 50;
+      const span = end - start;
+      arcs.forEach((p, i) => {
+        const x = start + ((t * 0.09 + i * span / 4) % span);   // energy waves travel from the ejector to the atom
+        const edge = Math.max(0, Math.min(1, (x - start) / 25, (end - x) / 25));
+        p.setAttribute('transform', `translate(${x.toFixed(1)},${TIP.y})`);
+        p.style.opacity = (strength / 100 * 0.9 * edge).toFixed(2);
+      });
+
+      const over = drag && inZone(drag.a);
+      zoneRect.classList.toggle('hot', !!over);
+      zoneText.style.display = (zoneAtom || over) ? 'none' : '';
+      zoneName.textContent = zoneAtom ? zoneAtom.name : '';
+      PT.highlight(drag ? drag.a.sym : (zoneAtom ? zoneAtom.sym : null));
+    }
+
+    function frame(t){
+      if (current === 'ionization-energy'){
+        atoms.forEach(a => {
+          if (!a.anim) return;
+          const p = clamp((t - a.anim.start) / a.anim.dur, 0, 1), k = ease(p);
+          a.x = lerp(a.anim.fx, a.anim.tx, k); a.y = lerp(a.anim.fy, a.anim.ty, k);
+          if (p >= 1) a.anim = null;
+        });
+        const za = zoneAtom;
+        if (za && !za.anim && !za.removed && strength >= za.need) removeElectron(za, t);
+        render(t);
+      }
+      requestAnimationFrame(frame);
+    }
+
+    setStrength(0);
+    PT.update();
+    requestAnimationFrame(frame);
+  })();
+
+  /* ---------- Instructions panel (collapsible, open by default) ---------- */
+  function makeInstructions(parent, x, y, w, lines, layer){
+    const P = el('g', {transform:`translate(${x},${y})`}, layer || parent);
+    const h = 64 + (lines.length - 1) * 19;
+    const bg = el('rect', {x:0, y:0, width:w, height:h, rx:8, class:'panel'}, P);
+    const body = el('g', {}, P);
+    lines.forEach(([num, txt], i) => {
+      const yy = 52 + i * 19;
+      if (num){ const n = el('text', {x:14, y:yy, class:'inst-num'}, body); n.textContent = num; }
+      const t = el('text', {x:34, y:yy, class:'inst-text'}, body); t.textContent = txt;
+    });
+    const head = el('g', {class:'pt-head'}, P);
+    el('rect', {x:0, y:0, width:w, height:32, class:'pt-head-bg'}, head);
+    const tt = el('text', {x:12, y:22, class:'pt-title'}, head); tt.textContent = 'Instructions';
+    const ar = el('text', {x:w - 16, y:22, class:'pt-toggle'}, head); ar.textContent = '▾';
+    let open = true;
+    head.addEventListener('click', () => {
+      open = !open;
+      body.style.display = open ? '' : 'none';
+      bg.setAttribute('height', open ? h : 32);
+      ar.textContent = open ? '▾' : '▸';
+    });
+  }
+
+  /* ---------- Narrow tray along the right edge (one column, labels beside each item) ---------- */
+  function traySlot(i, n){ return {x:992, y: n === 9 ? 47 + i * 75 : 54 + i * 84}; }
+  function makeTray(parent, names){
+    el('rect', {x:940, y:12, width:248, height:676, rx:14, class:'tray'}, parent);
+    names.forEach((nm, i) => { const t = el('text', {x:1036, y:traySlot(i, names.length).y + 5, class:'tray-label'}, parent); t.textContent = nm; });
+  }
+
+  /* ---------- Shared helpers for the later screens ---------- */
+  function svgPointer(s){
+    return ev => { const pt = s.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; return pt.matrixTransform(s.getScreenCTM().inverse()); };
+  }
+  function makeReset(parent, onClick){
+    const rg = el('g', {class:'reset', transform:'translate(56,636)'}, parent);
+    const rt = el('title', {}, rg); rt.textContent = 'Reset';
+    el('circle', {r:30, class:'reset-bg'}, rg);
+    const ra = el('g', {transform:'scale(1.35)'}, rg);
+    el('path', {d:'M11.8 2.1 A12 12 0 1 1 6 -10.4', class:'reset-arrow'}, ra);
+    el('polygon', {points:'12.4,-6.6 3.2,-6 8.8,-15', fill:'#fff'}, ra);
+    rg.addEventListener('click', onClick);
+  }
+  function makePanelHead(P, width, openH, body, pBg){
+    const head = el('g', {class:'pt-head'}, P);
+    el('rect', {x:0, y:0, width, height:32, class:'pt-head-bg'}, head);
+    const ttl = el('text', {x:12, y:22, class:'pt-title'}, head); ttl.textContent = 'Periodic Table';
+    const arrow = el('text', {x:width - 16, y:22, class:'pt-toggle'}, head); arrow.textContent = '▾';
+    let open = true;
+    head.addEventListener('click', () => {
+      open = !open;
+      body.style.display = open ? '' : 'none';
+      pBg.setAttribute('height', open ? openH : 32);
+      arrow.textContent = open ? '▾' : '▸';
+    });
+  }
+  // Main-group table (periods 1-5) recording a number per element
+  function buildMainPT(parent, transform, legend, lo, hi, vmin, vmax, getRec, onClear, fmt){
+    const P = el('g', {transform}, parent);
+    const pBg = el('rect', {x:0, y:0, width:300, height:274, rx:8, class:'panel'}, P);
+    const body = el('g', {}, P);
+    makePanelHead(P, 300, 274, body, pBg);
+    const gc = el('text', {x:168, y:46, class:'pt-small', 'text-anchor':'middle'}, body); gc.textContent = 'Group';
+    GROUPS.forEach((g, c) => { const t = el('text', {x:40 + c*32 + 15, y:60, class:'pt-small', 'text-anchor':'middle'}, body); t.textContent = g; });
+    const pc = el('text', {x:14, y:141, class:'pt-small', 'text-anchor':'middle', transform:'rotate(-90 14 141)'}, body); pc.textContent = 'Period';
+    const cellsM = {};
+    PT_ROWS.forEach((row, r) => {
+      const rl = el('text', {x:30, y:66 + r*30 + 18, class:'pt-small', 'text-anchor':'middle'}, body); rl.textContent = r + 1;
+      row.forEach((sym, c) => {
+        if (!sym) return;
+        const x = 40 + c*32, y = 66 + r*30, sim = !!EL[sym];
+        const rect = el('rect', {x, y, width:30, height:28, rx:3, class:'pt-cell' + (sim ? ' sim' : '')}, body);
+        const st = el('text', {x:x + 15, y: sim ? y + 13 : y + 18, class:'pt-sym' + (sim ? ' sim' : '')}, body);
+        st.textContent = sym;
+        if (sim){ const vt = el('text', {x:x + 15, y:y + 24.5, class:'pt-val'}, body); cellsM[sym] = {rect, sym:st, val:vt}; }
+      });
+    });
+    const lc = el('text', {x:40, y:236, class:'pt-small'}, body); lc.textContent = legend;
+    el('rect', {x:40, y:242, width:150, height:9, rx:2, fill:'url(#gScale)', stroke:'#9aa3ab', 'stroke-width':.8}, body);
+    const l1 = el('text', {x:40, y:264, class:'pt-small'}, body); l1.textContent = lo;
+    const l2 = el('text', {x:190, y:264, class:'pt-small', 'text-anchor':'end'}, body); l2.textContent = hi;
+    const clr = el('text', {x:288, y:264, class:'pt-link'}, body); clr.textContent = 'Clear data';
+    clr.addEventListener('click', onClear);
+    function update(){
+      const rec = getRec();
+      for (const sym in cellsM){
+        const c = cellsM[sym], v = rec[sym];
+        if (v != null){
+          const t = clamp((v - vmin) / (vmax - vmin), 0, 1), dark = t > 0.55;
+          c.rect.style.fill = `rgb(${Math.round(lerp(255,196,t))},${Math.round(lerp(240,56,t))},${Math.round(lerp(176,18,t))})`;
+          c.sym.style.fill = dark ? '#fff' : '#222';
+          c.val.style.fill = dark ? '#fff' : '#333';
+          c.val.textContent = fmt ? fmt(v) : v;
+        } else { c.rect.style.fill = ''; c.sym.style.fill = ''; c.val.textContent = ''; }
+      }
+    }
+    let last = null;
+    function highlight(sym){
+      if (sym === last) return;
+      if (last && cellsM[last]){ cellsM[last].rect.style.stroke = ''; cellsM[last].rect.style.strokeWidth = ''; }
+      if (sym && cellsM[sym]){ cellsM[sym].rect.style.stroke = '#e09a00'; cellsM[sym].rect.style.strokeWidth = '3'; }
+      last = sym;
+    }
+    return {update, highlight};
+  }
+
+  /* ---------- Electrical conductivity screen ---------- */
+  (function(){
+    const svg = document.getElementById('ecSvg');
+    const toLocal = svgPointer(svg);
+    const CATS = [
+      {key:'noble',      name:'Noble gas',             color:'#4dabf7', stroke:'#1971c2', conducts:false},
+      {key:'transition', name:'Transition metal',      color:'#ffd43b', stroke:'#c99700', conducts:true},
+      {key:'alkali',     name:'Alkali metal',          color:'#ff6b6b', stroke:'#c92a2a', conducts:true},
+      {key:'nonmetal',   name:'Reactive nonmetal',     color:'#69db7c', stroke:'#2b8a3e', conducts:false},
+      {key:'act',        name:'Actinoid',              color:'#c084fc', stroke:'#7e3fbf', conducts:true},
+      {key:'post',       name:'Post-transition metal', color:'#b8c0c8', stroke:'#6c757d', conducts:true},
+      {key:'metalloid',  name:'Metalloid',             color:'#d4a373', stroke:'#9c6b3f', conducts:'some'},
+      {key:'alkaline',   name:'Alkaline earth metal',  color:'#ffa94d', stroke:'#d9480f', conducts:true},
+      {key:'lan',        name:'Lanthanoid',            color:'#f783ac', stroke:'#c2255c', conducts:true}
+    ];
+    const CAT = {}; CATS.forEach(c => CAT[c.key] = c);
+    const CAT_OF = {};
+    const addCat = (k, list) => list.split(' ').forEach(s => CAT_OF[s] = k);
+    addCat('alkali', 'Li Na K Rb Cs Fr');
+    addCat('alkaline', 'Be Mg Ca Sr Ba Ra');
+    addCat('transition', 'Sc Ti V Cr Mn Fe Co Ni Cu Zn Y Zr Nb Mo Tc Ru Rh Pd Ag Cd Hf Ta W Re Os Ir Pt Au Hg Rf Db Sg Bh Hs Mt Ds Rg Cn');
+    addCat('post', 'Al Ga In Sn Tl Pb Bi Po Nh Fl Mc Lv');
+    addCat('nonmetal', 'H C N O F P S Cl Se Br I');
+    addCat('noble', 'He Ne Ar Kr Xe Rn Og');
+    addCat('lan', '* La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu');
+    addCat('act', '** Ac Th Pa U Np Pu Am Cm Bk Cf Es Fm Md No Lr');
+    addCat('metalloid', 'B Si Ge As Sb Te');
+    const E = n => Array(n).fill('');
+    const MAIN = [
+      ['H', ...E(16), 'He'],
+      ['Li','Be', ...E(10), 'B','C','N','O','F','Ne'],
+      ['Na','Mg', ...E(10), 'Al','Si','P','S','Cl','Ar'],
+      'K Ca Sc Ti V Cr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr'.split(' '),
+      'Rb Sr Y Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te I Xe'.split(' '),
+      'Cs Ba * Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn'.split(' '),
+      'Fr Ra ** Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og'.split(' ')
+    ];
+    const FROWS = ['La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu'.split(' '), 'Ac Th Pa U Np Pu Am Cm Bk Cf Es Fm Md No Lr'.split(' ')];
+
+    const ZONE = {x:660, y:100, w:200, h:200, cx:760, cy:200};
+    const SR = 28, ZS = 1.8;   // sample radius in the tray, and its scale in the circuit
+    let on = false, recorded = {}, drag = null, zoneS = null, hintHidden = false, glowLevel = 0;
+
+    el('rect', {x:0, y:0, width:W, height:H, fill:'transparent'}, svg);
+    const gTray = el('g', {}, svg);
+    const gCircuit = el('g', {}, svg);
+    const gZone = el('g', {}, svg);
+    const gHint = el('g', {class:'hint'}, svg);
+    const gPanel = el('g', {}, svg);
+    const gCtl = el('g', {}, svg);
+    const gReset = el('g', {}, svg);
+    const gSamples = el('g', {}, svg);
+    const gFlow = el('g', {style:'pointer-events:none'}, svg);
+    const gBulb = el('g', {style:'pointer-events:none'}, svg);
+
+    makeTray(gTray, CATS.map(c => c.name));
+
+    /* Circuit */
+    el('path', {d:'M220 150 V80 H760 V146', class:'wire'}, gCircuit);
+    el('path', {d:'M760 254 V320 H220 V240', class:'wire'}, gCircuit);
+    el('rect', {x:742, y:142, width:36, height:9, rx:2, class:'clamp'}, gCircuit);
+    el('rect', {x:742, y:249, width:36, height:9, rx:2, class:'clamp'}, gCircuit);
+    el('rect', {x:210, y:142, width:20, height:10, rx:2, fill:'#8a8f96'}, gCircuit);
+    el('rect', {x:194, y:150, width:52, height:92, rx:7, fill:'#3c3c3c', stroke:'#1d1d1d', 'stroke-width':2}, gCircuit);
+    el('path', {d:'M194 176 V157 Q194 150 201 150 H239 Q246 150 246 157 V176 Z', fill:'#c0392b'}, gCircuit);
+    const bp = el('text', {x:220, y:170, fill:'#fff', 'font-size':18, 'font-weight':'bold', 'text-anchor':'middle'}, gCircuit); bp.textContent = '+';
+    const bm = el('text', {x:220, y:232, fill:'#fff', 'font-size':20, 'font-weight':'bold', 'text-anchor':'middle'}, gCircuit); bm.textContent = '−';
+
+    const bulbGlow = el('circle', {cx:490, cy:40, r:78, fill:'url(#gGlow)', style:'opacity:0'}, gBulb);
+    const bulbGlass = el('circle', {cx:490, cy:40, r:24, class:'bulb-glass'}, gBulb);
+    el('path', {d:'M482 46 L485 34 L490 46 L495 34 L498 46', class:'filament'}, gBulb);
+    el('rect', {x:477, y:62, width:26, height:20, rx:3, fill:'#8a8f96', stroke:'#5b6168', 'stroke-width':1.5}, gBulb);
+    el('line', {x1:478, y1:70, x2:502, y2:70, stroke:'#5b6168', 'stroke-width':1.5}, gBulb);
+
+    const flowDots = Array.from({length:18}, () => el('circle', {r:4, class:'e-dot', style:'display:none'}, gFlow));
+    const LOOP = [[220,320],[760,320],[760,80],[220,80],[220,320]];
+    const SEG = LOOP.slice(1).map((p, i) => Math.hypot(p[0] - LOOP[i][0], p[1] - LOOP[i][1]));
+    const LOOP_LEN = SEG.reduce((a, b) => a + b, 0);
+    function loopAt(s){
+      for (let i = 0; i < SEG.length; i++){
+        if (s <= SEG[i]){ const k = s / SEG[i]; return [lerp(LOOP[i][0], LOOP[i+1][0], k), lerp(LOOP[i][1], LOOP[i+1][1], k)]; }
+        s -= SEG[i];
+      }
+      return LOOP[0];
+    }
+
+    /* Battery switch */
+    const lb = el('text', {x:100, y:158, class:'ctl-label'}, gCtl); lb.textContent = 'Battery';
+    const pb = el('g', {class:'power-btn'}, gCtl);
+    el('rect', {x:40, y:168, width:120, height:50, rx:12, class:'power-bg'}, pb);
+    const pbText = el('text', {x:100, y:199, class:'power-text'}, pb);
+    function setOn(v){ on = v; pbText.textContent = on ? 'Turn off' : 'Turn on'; pb.classList.toggle('is-on', on); }
+    pb.addEventListener('click', () => setOn(!on));
+
+    /* Drop zone */
+    const zoneRect = el('rect', {x:ZONE.x, y:ZONE.y, width:ZONE.w, height:ZONE.h, rx:16, class:'drop-zone'}, gZone);
+    const zoneText = el('text', {x:ZONE.cx, y:ZONE.y + 24, class:'zone-text-sm'}, gZone); zoneText.textContent = 'Drag a sample here';
+    const status = el('text', {x:450, y:296, class:'status-text'}, gZone);
+    function inZone(s){ return s.x > ZONE.x && s.x < ZONE.x + ZONE.w && s.y > ZONE.y && s.y < ZONE.y + ZONE.h; }
+
+    makeInstructions(gHint.parentNode, 262, 102, 380, [
+      ['1.','Drag a sample into the gap in the circuit.'],
+      ['2.','Turn on the battery and watch the bulb.'],
+      ['3.','The result (y or n) goes in the table.'],
+      ['4.','Return the sample to the tray to test the next.']
+    ], gHint);
+
+    /* Full periodic table recording y / n by category */
+    const PT = (function(){
+      const P = el('g', {transform:'translate(110,338) scale(1.2)'}, gPanel);
+      const pBg = el('rect', {x:0, y:0, width:456, height:298, rx:8, class:'panel'}, P);
+      const body = el('g', {}, P);
+      makePanelHead(P, 456, 298, body, pBg);
+      const cells = [];
+      function addCell(sym, x, y){
+        const rect = el('rect', {x, y, width:22, height:22, rx:2, class:'pt-cell'}, body);
+        const st = el('text', {x:x + 11, y:y + 14.5, class:'ptf-sym'}, body); st.textContent = sym;
+        const vt = el('text', {x:x + 11, y:y + 16, class:'ptf-val'}, body);
+        cells.push({rect, st, vt, cat:CAT_OF[sym] || null});
+      }
+      MAIN.forEach((row, r) => row.forEach((sym, c) => { if (sym) addCell(sym, 12 + c*24, 40 + r*24); }));
+      FROWS.forEach((row, r) => row.forEach((sym, i) => addCell(sym, 12 + (i + 2)*24, 216 + r*24)));
+      const lg1 = el('text', {x:12, y:286, class:'pt-small'}, body); lg1.textContent = 'y = bulb lit (even dimly)';
+      const lg2 = el('text', {x:160, y:286, class:'pt-small'}, body); lg2.textContent = 'n = bulb stayed dark';
+      const clr = el('text', {x:444, y:286, class:'pt-link'}, body); clr.textContent = 'Clear data';
+      clr.addEventListener('click', () => { recorded = {}; update(); });
+      function update(){
+        cells.forEach(c => {
+          const v = c.cat ? recorded[c.cat] : null;
+          if (v){ c.rect.style.fill = CAT[c.cat].color; c.st.style.display = 'none'; c.vt.textContent = v; }
+          else { c.rect.style.fill = ''; c.st.style.display = ''; c.vt.textContent = ''; }
+        });
+      }
+      let last = null;
+      function highlight(key){
+        if (key === last) return;
+        cells.forEach(c => {
+          const hit = key && c.cat === key;
+          c.rect.style.stroke = hit ? '#1b1f23' : '';
+          c.rect.style.strokeWidth = hit ? '1.8' : '';
+        });
+        last = key;
+      }
+      return {update, highlight};
+    })();
+
+    /* Samples */
+    const samples = CATS.map((c, i) => {
+      const slot = traySlot(i, CATS.length), hx = slot.x, hy = slot.y;
+      const s = Object.assign({x:hx, y:hy, hx, hy, anim:null, sc:1, ts:1}, c);
+      s.g = el('g', {class:'sample'}, gSamples);
+      el('circle', {r:SR + 6, class:'atom-hit'}, s.g);
+      el('circle', {r:SR, fill:c.color, stroke:c.stroke, 'stroke-width':2.5}, s.g);
+      el('ellipse', {cx:-8, cy:-10, rx:8, ry:5.5, fill:'#fff', opacity:.45}, s.g);
+      s.g.addEventListener('pointerdown', ev => startDrag(ev, s));
+      return s;
+    });
+
+    function sendHome(s, t){ s.ts = 1; s.anim = {fx:s.x, fy:s.y, tx:s.hx, ty:s.hy, start:t, dur:450}; }
+    function startDrag(ev, s){
+      ev.preventDefault();
+      s.anim = null;
+      if (zoneS === s){ zoneS = null; setOn(false); }   // removing the sample switches the battery off
+      s.ts = 1;
+      const p = toLocal(ev);
+      drag = {s, id:ev.pointerId, dx:s.x - p.x, dy:s.y - p.y};
+      gSamples.appendChild(s.g);
+      try { svg.setPointerCapture(ev.pointerId); } catch(_){}
+    }
+    svg.addEventListener('pointermove', ev => {
+      if (!drag || ev.pointerId !== drag.id) return;
+      const p = toLocal(ev), s = drag.s;
+      const r = SR * s.sc;
+      s.x = clamp(p.x + drag.dx, r + 4, W - r - 4);
+      s.y = clamp(p.y + drag.dy, r + 4, H - r - 4);
+    });
+    ['pointerup','pointercancel','lostpointercapture'].forEach(n => svg.addEventListener(n, ev => {
+      if (!drag || ev.pointerId !== drag.id) return;
+      const s = drag.s, t = performance.now();
+      drag = null;
+      if (inZone(s)){
+        if (zoneS && zoneS !== s){ sendHome(zoneS, t); setOn(false); }
+        zoneS = s;
+        s.ts = ZS;
+        s.anim = {fx:s.x, fy:s.y, tx:ZONE.cx, ty:ZONE.cy, start:t, dur:300};
+      } else sendHome(s, t);
+    }));
+
+    makeReset(gReset, () => {
+      const t = performance.now();
+      drag = null; zoneS = null;
+      setOn(false);
+      samples.forEach(s => sendHome(s, t));
+    });
+
+    function frame(t){
+      if (current === 'conductivity'){
+        samples.forEach(s => {
+          if (s.anim){
+            const p = clamp((t - s.anim.start) / s.anim.dur, 0, 1), k = ease(p);
+            s.x = lerp(s.anim.fx, s.anim.tx, k); s.y = lerp(s.anim.fy, s.anim.ty, k);
+            if (p >= 1) s.anim = null;
+          }
+          s.sc += (s.ts - s.sc) * 0.2;
+          if (Math.abs(s.ts - s.sc) < 0.002) s.sc = s.ts;
+          s.g.setAttribute('transform', `translate(${s.x.toFixed(1)},${s.y.toFixed(1)}) scale(${s.sc.toFixed(3)})`);
+        });
+
+        const ready = zoneS && !zoneS.anim;
+        const lit = !!(on && ready && zoneS.conducts);
+        const dim = lit && zoneS.conducts === 'some';   // metalloids are semiconductors: a weak current
+        if (on && ready){
+          const v = zoneS.conducts ? 'y' : 'n';
+          if (recorded[zoneS.key] !== v){ recorded[zoneS.key] = v; PT.update(); }
+          if (!hintHidden){ hintHidden = true; gHint.classList.add('gone'); }
+          status.textContent = zoneS.name + (dim ? ': the bulb glows dimly.' : lit ? ': the bulb lights up.' : ': the bulb stays dark.');
+        } else status.textContent = '';
+
+        glowLevel += ((dim ? 0.35 : lit ? 1 : 0) - glowLevel) * 0.15;
+        bulbGlow.style.opacity = glowLevel.toFixed(3);
+        bulbGlass.classList.toggle('lit', glowLevel > 0.5);
+        bulbGlass.classList.toggle('dim', glowLevel > 0.15 && glowLevel <= 0.5);
+        flowDots.forEach((d, i) => {
+          if (!lit || (dim && i % 3)){ d.style.display = 'none'; return; }
+          const pos = loopAt((t * (dim ? 0.03 : 0.09) + i * LOOP_LEN / flowDots.length) % LOOP_LEN);
+          d.style.display = '';
+          d.setAttribute('cx', pos[0].toFixed(1)); d.setAttribute('cy', pos[1].toFixed(1));
+        });
+
+        const over = drag && inZone(drag.s);
+        zoneRect.classList.toggle('hot', !!over);
+        zoneText.style.display = (zoneS || over) ? 'none' : '';
+        PT.highlight(drag ? drag.s.key : (zoneS ? zoneS.key : null));
+      }
+      requestAnimationFrame(frame);
+    }
+
+    setOn(false);
+    PT.update();
+    requestAnimationFrame(frame);
+  })();
+
+  /* ---------- Atomic radius screen ---------- */
+  (function(){
+    const svg = document.getElementById('arSvg');
+    const toLocal = svgPointer(svg);
+    const K = 0.45, PX = 1.15, MAG = PX / K, TS = 0.5;   // atoms drawn to scale; small in the tray, magnified in the box
+    const RMAX = 250;                          // ruler length in pm
+    const ZONE = {x:30, y:15, w:580, h:585};
+    const C = {x:290, y:300};
+    const TOL = 8;                             // pm tolerance for a successful measurement
+    // Common ion of each element: ionic radius (pm) and electron arrangement
+    const ION = {
+      Li:{name:'Lithium ion',  charge:'+',  r:76,  shells:[2],           change:'lost 1 electron'},
+      Na:{name:'Sodium ion',   charge:'+',  r:102, shells:[2,8],         change:'lost 1 electron'},
+      N: {name:'Nitride ion',  charge:'3−', r:146, shells:[2,8],         change:'gained 3 electrons', added:3},
+      F: {name:'Fluoride ion', charge:'−',  r:133, shells:[2,8],         change:'gained 1 electron',  added:1},
+      Cl:{name:'Chloride ion', charge:'−',  r:181, shells:[2,8,8],       change:'gained 1 electron',  added:1},
+      Br:{name:'Bromide ion',  charge:'−',  r:196, shells:[2,8,18,8],    change:'gained 1 electron',  added:1},
+      I: {name:'Iodide ion',   charge:'−',  r:220, shells:[2,8,18,18,8], change:'gained 1 electron',  added:1}
+    };
+    let recorded = {}, drag = null, hDrag = null, zoneAtom = null, len = 30, measured = false;
+
+    el('rect', {x:0, y:0, width:W, height:H, fill:'transparent'}, svg);
+    const gTray = el('g', {}, svg);
+    const gZone = el('g', {}, svg);
+    const gHint = el('g', {class:'hint'}, svg);
+    const gPanel = el('g', {}, svg);
+    const gReset = el('g', {}, svg);
+    const gAtoms = el('g', {}, svg);
+    const gMeasure = el('g', {}, svg);
+    const gRead = el('g', {style:'pointer-events:none'}, svg);
+    const gBtn = el('g', {}, svg);
+
+    makeTray(gTray, ['Chlorine','Lithium','Boron','Iodine','Sodium','Fluorine','Bromine','Nitrogen']);
+    const zoneRect = el('rect', {x:ZONE.x, y:ZONE.y, width:ZONE.w, height:ZONE.h, rx:18, class:'drop-zone'}, gZone);
+    const zoneText = el('text', {x:C.x + 30, y:C.y - 40, class:'zone-text'}, gZone); zoneText.textContent = 'Drag an atom here';
+    function inZone(a){ return a.x > ZONE.x && a.x < ZONE.x + ZONE.w && a.y > ZONE.y && a.y < ZONE.y + ZONE.h; }
+
+    makeInstructions(gHint, 620, 560, 310, [
+      ['1.','Drag an atom into the box.'],
+      ['2.','Drag the red handle to the outer shell.'],
+      ['3.','Click “Make it an ion!”, then measure.'],
+      ['4.','Return the atom to the tray.']
+    ]);
+    el('rect', {x:620, y:12, width:310, height:248, rx:8, class:'panel'}, gPanel);
+    const rdEmpty = el('text', {x:775, y:142, class:'rd-msg'}, gPanel); rdEmpty.textContent = 'Put an atom in the box to measure it.';
+
+    /* Atoms drawn to scale */
+    function drawModel(g, R, shells, added){
+      const nucR = 9, n = shells.length; let outer = null;
+      const shellR = [];
+      for (let k = 1; k <= n; k++){
+        const r = nucR + 3 + (R - nucR - 3) * k / n;
+        shellR.push(r);
+        const c = el('circle', {r:r.toFixed(2), class:'shell'}, g);
+        if (k === n) outer = c;
+      }
+      shells.forEach((cnt, k) => {
+        const r = shellR[k], last = k === n - 1;
+        for (let i = 0; i < cnt; i++){
+          const ang = -Math.PI/2 + i * 2 * Math.PI / cnt + (last ? 0 : k * 0.4);
+          const isNew = last && added && i >= cnt - added;
+          el('circle', {cx:(r*Math.cos(ang)).toFixed(2), cy:(r*Math.sin(ang)).toFixed(2), r:last ? 3 : 2.4,
+                        class:'e-dot' + (last ? '' : ' inner') + (isNew ? ' added' : '')}, g);
+        }
+      });
+      return outer;
+    }
+    const atoms = [];
+    function makeAtom(sym, hx, hy){
+      const d = EL[sym];
+      const a = Object.assign({sym, x:hx, y:hy, hx, hy, anim:null, s:TS, ts:TS, isIon:false, morph:null}, d);
+      a.R = d.rpm * K;
+      a.g = el('g', {class:'atom'}, gAtoms);
+      const io = ION[sym];
+      el('circle', {r:Math.max(a.R + 8, 52), class:'atom-hit'}, a.g);
+      a.atomG = el('g', {}, a.g);
+      a.outer = drawModel(a.atomG, a.R, d.shells, 0);
+      if (io){
+        a.ion = io; a.ionR = io.r * K;
+        a.ionG = el('g', {style:'display:none;opacity:0'}, a.g);
+        a.ionOuter = drawModel(a.ionG, a.ionR, io.shells, io.added || 0);
+      }
+      el('circle', {r:9, class:'nucleus'}, a.g);
+      const t = el('text', {class:'nuc-label', 'font-size': sym.length > 1 ? 9 : 10}, a.g); t.textContent = sym;
+      const nm = el('text', {y:(a.R + 18).toFixed(1), class:'atom-name'}, a.g); nm.textContent = d.name;
+      a.g.addEventListener('pointerdown', ev => startDrag(ev, a));
+      return a;
+    }
+    ['Cl','Li','B','I','Na','F','Br','N'].forEach((s, i) => { const p = traySlot(i); atoms.push(makeAtom(s, p.x, p.y)); });
+
+    // Cross-fade between the neutral atom and its ion while scaling between their sizes
+    function applyMorph(a, t){
+      if (!a.ionG) return;
+      let p = a.isIon ? 1 : 0;
+      if (a.morph){
+        const q = clamp((t - a.morph.start) / 700, 0, 1), k = ease(q);
+        p = a.isIon ? k : 1 - k;
+        if (q >= 1) a.morph = null;
+      }
+      const ratio = a.ionR / a.R;
+      a.atomG.setAttribute('transform', `scale(${lerp(1, ratio, p).toFixed(3)})`);
+      a.atomG.style.opacity = (1 - p).toFixed(3);
+      a.atomG.style.display = p >= 1 ? 'none' : '';
+      a.ionG.setAttribute('transform', `scale(${lerp(1 / ratio, 1, p).toFixed(3)})`);
+      a.ionG.style.opacity = p.toFixed(3);
+      a.ionG.style.display = p <= 0 ? 'none' : '';
+    }
+
+    /* Ruler and radius arrow */
+    const ruler = el('g', {transform:`translate(${C.x},${C.y})`, style:'pointer-events:none'}, gMeasure);
+    el('rect', {x:-12, y:14, width:RMAX * PX + 34, height:36, rx:3, class:'ruler'}, ruler);
+    for (let pm = 0; pm <= RMAX; pm += 10){
+      const x = pm * PX, major = pm % 50 === 0;
+      el('line', {x1:x, y1:14, x2:x, y2:14 + (major ? 13 : 7), class:'ruler-tick'}, ruler);
+      if (major){ const tl = el('text', {x, y:42, class:'ruler-label'}, ruler); tl.textContent = pm; }
+    }
+    const um = el('text', {x:RMAX * PX + 13, y:30, class:'ruler-label'}, ruler); um.textContent = 'pm';
+    const gArrow = el('g', {}, gMeasure);
+    const rLine = el('line', {x1:C.x, y1:C.y, x2:C.x, y2:C.y, class:'radius-line'}, gArrow);
+    const hG = el('g', {}, gArrow);
+    const handle = el('circle', {r:11, class:'handle'}, hG);
+    el('circle', {r:22, class:'handle-hit'}, hG);
+
+    /* Readout */
+    const rdName = el('text', {x:775, y:52, class:'rd-name'}, gRead);
+    const rdVal = el('text', {x:775, y:100, class:'rd-val'}, gRead);
+    const rdMsg1 = el('text', {x:775, y:136, class:'rd-msg'}, gRead);
+    const rdMsg2 = el('text', {x:775, y:157, class:'rd-msg'}, gRead);
+    const rdNote = el('text', {x:775, y:246, class:'rd-msg'}, gRead);
+
+    /* Make it an ion! button */
+    const ionBtn = el('g', {class:'ion-btn'}, gBtn);
+    el('rect', {x:680, y:178, width:190, height:46, rx:12, class:'ion-bg'}, ionBtn);
+    const ionText = el('text', {x:775, y:207, class:'ion-text'}, ionBtn);
+    ionBtn.addEventListener('click', () => {
+      const a = zoneAtom;
+      if (!a || a.anim || !a.ionG || a.morph) return;
+      a.isIon = !a.isIon;
+      a.morph = {start:performance.now()};
+      measured = false;
+      a.outer.classList.remove('hot'); a.ionOuter.classList.remove('hot');
+    });
+
+    // Data table: element, neutral atom radius, ion charge, ion radius
+    const PT = (function(){
+      const ROWS = ['Li','B','N','F','Na','Cl','Br','I'];
+      const P = el('g', {transform:'translate(620,270)'}, gPanel);
+      el('rect', {x:0, y:0, width:310, height:282, rx:8, class:'panel'}, P);
+      const tt = el('text', {x:12, y:22, class:'pt-title'}, P); tt.textContent = 'Data Table';
+      const cols = [{x:10, w:76, h:['Element']}, {x:86, w:80, h:['Neutral atom', 'radius (pm)']},
+                    {x:166, w:56, h:['Ion', 'charge']}, {x:222, w:78, h:['Ion', 'radius (pm)']}];
+      el('rect', {x:10, y:32, width:290, height:34, class:'dt-head'}, P);
+      cols.forEach(c => c.h.forEach((ln, i) => {
+        const t = el('text', {x:c.x + c.w / 2, y:c.h.length > 1 ? 46 + i * 13 : 53, class:'dt-h'}, P); t.textContent = ln;
+      }));
+      const cells = {};
+      ROWS.forEach((sym, r) => {
+        const y = 66 + r * 24;
+        el('rect', {x:10, y, width:290, height:24, class:'dt-row' + (r % 2 ? ' alt' : '')}, P);
+        const nm = el('text', {x:16, y:y + 16, class:'dt-c name'}, P); nm.textContent = EL[sym].name;
+        const ca = el('text', {x:cols[1].x + cols[1].w / 2, y:y + 16, class:'dt-c'}, P);
+        const cc = el('text', {x:cols[2].x + cols[2].w / 2, y:y + 16, class:'dt-c'}, P);
+        const ci = el('text', {x:cols[3].x + cols[3].w / 2, y:y + 16, class:'dt-c'}, P);
+        cells[sym] = {y, ca, cc, ci};
+      });
+      [86, 166, 222].forEach(x => el('line', {x1:x, y1:32, x2:x, y2:258, class:'dt-grid'}, P));
+      const hl = el('rect', {x:10, y:66, width:290, height:24, class:'dt-hot', style:'display:none'}, P);
+      const clr = el('text', {x:298, y:276, class:'pt-link'}, P); clr.textContent = 'Clear data';
+      clr.addEventListener('click', () => { recorded = {}; update(); });
+      function update(){
+        for (const sym in cells){
+          const r = recorded[sym] || {}, c = cells[sym];
+          c.ca.textContent = r.atom != null ? r.atom : '';
+          c.cc.textContent = r.charge || '';
+          c.ci.textContent = r.ion != null ? r.ion : '';
+        }
+      }
+      function highlight(sym){
+        if (sym && cells[sym]){ hl.style.display = ''; hl.setAttribute('y', cells[sym].y); }
+        else hl.style.display = 'none';
+      }
+      return {update, highlight};
+    })();
+    const chargeLabel = c => c === '+' ? '1+' : c === '−' ? '1−' : c;
+
+    function leaveZone(a){
+      a.ts = TS;
+      a.g.classList.remove('in-zone');
+      a.outer.classList.remove('hot');
+      if (a.ionG){ a.isIon = false; a.morph = null; a.ionOuter.classList.remove('hot'); applyMorph(a, 0); }
+    }
+    function sendHome(a, t){
+      leaveZone(a);
+      a.anim = {fx:a.x, fy:a.y, tx:a.hx, ty:a.hy, start:t, dur:450};
+    }
+    function target(a){ return a.isIon ? a.ion.r : a.rpm; }
+    function startDrag(ev, a){
+      ev.preventDefault();
+      a.anim = null;
+      if (zoneAtom === a){ zoneAtom = null; measured = false; leaveZone(a); }
+      const p = toLocal(ev);
+      drag = {a, id:ev.pointerId, dx:a.x - p.x, dy:a.y - p.y};
+      gAtoms.appendChild(a.g);
+      try { svg.setPointerCapture(ev.pointerId); } catch(_){}
+    }
+    hG.addEventListener('pointerdown', ev => {
+      if (!zoneAtom || zoneAtom.anim || zoneAtom.morph) return;
+      ev.preventDefault(); ev.stopPropagation();
+      hDrag = ev.pointerId;
+      measured = false;
+      try { svg.setPointerCapture(ev.pointerId); } catch(_){}
+    });
+    svg.addEventListener('pointermove', ev => {
+      if (hDrag === ev.pointerId){ len = clamp((toLocal(ev).x - C.x) / PX, 0, RMAX); return; }
+      if (!drag || ev.pointerId !== drag.id) return;
+      const p = toLocal(ev), a = drag.a;
+      const r = a.R * a.s;
+      a.x = clamp(p.x + drag.dx, r + 4, W - r - 4);
+      a.y = clamp(p.y + drag.dy, r + 4, H - r - 4);
+    });
+    ['pointerup','pointercancel','lostpointercapture'].forEach(n => svg.addEventListener(n, ev => {
+      if (hDrag === ev.pointerId){
+        hDrag = null;
+        const za = zoneAtom;
+        if (za && Math.abs(len - target(za)) <= TOL){
+          len = target(za);
+          measured = true;
+          const r = recorded[za.sym] || (recorded[za.sym] = {});
+          if (za.isIon){ r.ion = za.ion.r; r.charge = chargeLabel(za.ion.charge); }
+          else {
+            r.atom = za.rpm;
+            if (!za.ion){ r.charge = 'none'; r.ion = '—'; }
+          }
+          PT.update();
+        }
+        return;
+      }
+      if (!drag || ev.pointerId !== drag.id) return;
+      const a = drag.a, t = performance.now();
+      drag = null;
+      if (inZone(a)){
+        if (zoneAtom && zoneAtom !== a) sendHome(zoneAtom, t);
+        zoneAtom = a;
+        a.ts = MAG;
+        a.g.classList.add('in-zone');
+        a.anim = {fx:a.x, fy:a.y, tx:C.x, ty:C.y, start:t, dur:350};
+        len = 30; measured = false;
+      } else sendHome(a, t);
+    }));
+
+    makeReset(gReset, () => {
+      const t = performance.now();
+      drag = null; hDrag = null; zoneAtom = null; measured = false; len = 30;
+      atoms.forEach(a => sendHome(a, t));
+    });
+
+    function render(){
+      const za = zoneAtom, ready = za && !za.anim;
+      const over = drag && inZone(drag.a);
+      zoneRect.classList.toggle('hot', !!over);
+      zoneText.style.display = (za || over) ? 'none' : '';
+      gArrow.style.display = ready && !za.morph ? '' : 'none';
+      gRead.style.display = ready ? '' : 'none';
+      rdEmpty.style.display = ready ? 'none' : '';
+      gBtn.style.display = ready ? '' : 'none';
+      if (ready){
+        const tipX = C.x + len * PX;
+        rLine.setAttribute('x2', tipX.toFixed(1));
+        hG.setAttribute('transform', `translate(${tipX.toFixed(1)},${C.y})`);
+        const tgt = target(za), near = Math.abs(len - tgt) <= TOL;
+        const outer = za.isIon ? za.ionOuter : za.outer;
+        outer.classList.toggle('hot', !za.morph && (measured || (hDrag != null && near)));
+        rLine.classList.toggle('done', measured);
+        handle.classList.toggle('done', measured);
+        if (za.isIon){
+          const io = za.ion;
+          rdName.innerHTML = `${io.name} (${za.sym}<tspan dy="-10" font-size="16">${io.charge}</tspan><tspan dy="10">)</tspan>`;
+        } else rdName.textContent = za.name;
+        rdVal.textContent = 'r = ' + Math.round(len) + ' pm';
+        rdMsg1.classList.toggle('done', measured);
+        if (!za.isIon){
+          rdMsg1.textContent = measured ? 'Measured!' : 'Drag the red handle to the';
+          rdMsg2.textContent = measured ? '' : 'outer edge of the atom.';
+        } else if (!measured){
+          rdMsg1.textContent = `${za.name} ${za.ion.change}.`;
+          rdMsg2.textContent = 'Measure the ion’s radius.';
+        } else {
+          rdMsg1.textContent = 'Measured! The ion is ' + (za.ion.r < za.rpm ? 'smaller' : 'larger');
+          rdMsg2.textContent = `than the neutral atom (${za.rpm} pm).`;
+        }
+        ionBtn.classList.toggle('off', !za.ionG);
+        ionText.textContent = za.isIon ? 'Make it an atom again' : 'Make it an ion!';
+        rdNote.textContent = za.ionG ? '' : 'Boron does not usually form an ion.';
+      }
+      PT.highlight(drag ? drag.a.sym : (za ? za.sym : null));
+    }
+
+    function frame(t){
+      if (current === 'atomic-radius'){
+        atoms.forEach(a => {
+          if (a.anim){
+            const p = clamp((t - a.anim.start) / a.anim.dur, 0, 1), k = ease(p);
+            a.x = lerp(a.anim.fx, a.anim.tx, k); a.y = lerp(a.anim.fy, a.anim.ty, k);
+            if (p >= 1) a.anim = null;
+          }
+          a.s += (a.ts - a.s) * 0.18;
+          if (Math.abs(a.ts - a.s) < 0.002) a.s = a.ts;
+          if (a.morph) applyMorph(a, t);
+          a.g.setAttribute('transform', `translate(${a.x.toFixed(1)},${a.y.toFixed(1)}) scale(${a.s.toFixed(3)})`);
+        });
+        render();
+      }
+      requestAnimationFrame(frame);
+    }
+
+    PT.update();
+    requestAnimationFrame(frame);
+  })();
+
+  show(location.hash.slice(1) || 'home');
+})();
+</script>
+</body>
+</html>
